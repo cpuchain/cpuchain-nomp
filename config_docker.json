@@ -1,0 +1,61 @@
+{
+    "logLevel": "debug",
+    "logColors": true,
+    "cliPort": 17117,
+    "clustering": {
+        "enabled": true,
+        "forks": "auto"
+    },
+    "defaultPoolConfigs": {
+        "blockRefreshInterval": 500,
+        "jobRebroadcastTimeout": 55,
+        "connectionTimeout": 600,
+        "emitInvalidBlockHashes": false,
+        "validateWorkerUsername": true,
+        "tcpProxyProtocol": false,
+        "banning": {
+            "enabled": true,
+            "time": 600,
+            "invalidPercent": 50,
+            "checkThreshold": 500,
+            "purgeInterval": 300
+        },
+        "redis": {
+            "host": "redis",
+            "port": 6379
+        }
+    },
+    "website": {
+        "enabled": true,
+        "host": "0.0.0.0",
+        "port": 80,
+        "stratumHost": "cpuchain_pool",
+        "stats": {
+            "updateInterval": 60,
+            "historicalRetention": 43200,
+            "hashrateWindow": 300
+        },
+        "adminCenter": {
+            "enabled": false,
+            "password": "password"
+        }
+    },
+    "redis": {
+        "host": "redis",
+        "port": 6379
+    },
+    "switching": {
+        "switch1": {
+            "enabled": false
+        },
+        "switch2": {
+            "enabled": false
+        },
+        "switch3": {
+            "enabled": false
+        }
+    },
+    "profitSwitch": {
+        "enabled": false
+    }
+}

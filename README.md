@@ -1,4 +1,7 @@
-# NOMP ![NOMP Logo](http://zone117x.github.io/node-open-mining-portal/logo.svg "NOMP Logo")
+# CPUchain NOMP  <img src="./website/static/logo.svg" alt="NOMP Logo" height="35px"/>
+
+This is a CPUpower, Yescrypt, YesPoWer, Lyra2REv2, sha256d, Quark, x11 and more algo mining pool based off of Node Open Mining Portal.
+
 #### Node Open Mining Portal
 
 This portal is an extremely efficient, highly scalable, all-in-one, easy to setup cryptocurrency mining pool written
@@ -6,38 +9,144 @@ entirely in Node.js. It contains a stratum poolserver; reward/payment/share proc
 responsive user-friendly front-end website featuring mining instructions, in-depth live statistics, and an admin center.
 
 #### Production Usage Notice
+
 This is beta software. All of the following are things that can change and break an existing NOMP setup: functionality of any feature, structure of configuration files and structure of redis data. If you use this software in production then *DO NOT* pull new code straight into production usage because it can and often will break your setup and require you to tweak things like config files or redis data.
 
-#### Paid Solution
-Usage of this software requires abilities with sysadmin, database admin, coin daemons, and sometimes a bit of programming. Running a production pool can literally be more work than a full-time job. 
+### Community
 
+CPUchahin official Telegram Group
 
-**Coin switching & auto-exchanging for payouts in BTC/LTC** to miners is a feature that very likely will not be included in this project. 
+* Join [https://t.me/cpuchainofficial](https://t.me/cpuchainofficial)
 
+If your pool uses CPUchain-NOMP let us know and we will list your website here.
 
-#### Table of Contents
-* [Features](#features)
-  * [Attack Mitigation](#attack-mitigation)
-  * [Security](#security)
-  * [Planned Features](#planned-features)
-* [Community Support](#community--support)
-* [Usage](#usage)
-  * [Requirements](#requirements)
-  * [Setting Up Coin Daemon](#0-setting-up-coin-daemon)
-  * [Downloading & Installing](#1-downloading--installing)
-  * [Configuration](#2-configuration)
-    * [Portal Config](#portal-config)
-    * [Coin Config](#coin-config)
-    * [Pool Config](#pool-config)
-    * [Setting Up Blocknotify](#optional-recommended-setting-up-blocknotify)
-  * [Starting the Portal](#3-start-the-portal)
-  * [Upgrading NOMP](#upgrading-nomp)
-* [Donations](#donations)
-* [Credits](#credits)
-* [License](#license)
+### Some pools using CPUchain-NOMP or node-stratum-pool module:
 
+* [pool.cpuchain.org - CPUchain Mining Pool](https://pool.cpuchain.org/)
 
+## Running CPUchain node & Creating Pool Wallet
 
+In order to create a mining pool you must run a CPUchain node and import ( or create ) private key
+
+Using [Docker](https://www.docker.com/) is recommended since it doesn't require all the dependencies or some complex installation scripts
+
+### Install Docker
+
+To install Docker from Ubuntu use the following script
+
+```bash
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+sudo apt-get update && sudo apt-get install docker-ce docker-ce-cli containerd.io -y && \
+sudo usermod -aG docker ubuntu
+```
+
+This script could be changed at the future or can differ by the OS distros, you can check the latest installation method for docker from their official guides.
+
+### Running CPUchain
+
+Clone the latest CPUchain docker compose scripts and start them
+
+```bash
+cd $HOME # Put any working directory here
+git clone https://github.com/cpuchain/cpuchain-docker && \
+cd cpuchain-docker && \
+sudo cp cpuchain-docker /usr/local/bin && \
+docker compose up -d cpuchain_torrent cpuchain_node1
+```
+
+Allow necessary P2P ports if you use any firewalls
+
+```bash
+sudo ufw allow 19706
+sudo ufw allow 51413
+```
+
+Check the daemon logs with the following
+
+```bash
+docker compose logs -f --tail 100 cpuchain_node1
+```
+
+After the node is loaded you can check the node status with the command
+
+```bash
+cpuchain-docker -getinfo
+```
+
+`cpuchain-docker` is a wrapper for the `bitcoin-cli` ( aka `cpuchain-cli` ) for the docker image. You can google the usage of `bitcoin-cli` or type `cpuchain-docker help` to see available commands.
+
+### Import Pool Wallet
+
+In order to mine and pay rewards a pool should have a valid wallet.
+
+Here, we describe how to import an existing private key for a better management and backup.
+
+Create any private key from https://iancoleman.io/bip39/.
+
+We will use `L1uX2Wf9WGjPV9SCJ6NvxaWwdiDE4cDegs2vStoGuB6qLooivWCb` and the corresponding address `CUiaeCbZ1JTFg2dPCEDiaknRknP5JJ13Ss` for the example private key here.
+
+Create wallet ( not private key ) first
+
+```bash
+cpuchain-docker createwallet "pool" false false "" false false
+```
+
+Note that we use those args to not create a descriptor wallet which isn't stable
+
+Then, import the private key
+
+```bash
+cpuchain-docker sethdseed true L1uX2Wf9WGjPV9SCJ6NvxaWwdiDE4cDegs2vStoGuB6qLooivWCb
+cpuchain-docker rescanblockchain
+```
+
+This should take some time as they would rescan and import any balanaces from the blockchain.
+
+Check the imported private key using the command
+
+```bash
+cpuchain-docker listaddressgroupings
+```
+
+And test the withdrawal prior to run the pool for payments
+
+```bash
+cpuchain-docker sendmany "" "{\"CUiaeCbZ1JTFg2dPCEDiaknRknP5JJ13Ss\":0.01}"
+```
+
+`sendmany` is the default payment command used by NOMP and it will also credit changes to the change address derived from the `L1uX2Wf9WGjPV9SCJ6NvxaWwdiDE4cDegs2vStoGuB6qLooivWCb` private key. Change addresses should be retrieved from the desktop CPUchain Core wallet using the same `sethdseed` and `rescanblockchain` command from the console as well.
+
+If you have any CPU balance, they would appear.
+
+### Running NOMP pool
+
+Finally, clone the pool repository and edit the config for your pool
+
+```bash
+cd $HOME # Put any working directory here
+git clone https://github.com/cpuchain/cpuchain-nomp && \
+cd cpuchain-nomp
+```
+
+Allow necessary P2P ports if you use any firewalls
+
+```bash
+sudo ufw allow 8080
+sudo ufw allow 3032
+```
+
+Edit the `config_docker.json` and `cpuchain_pool.json` for your pool
+
+Usually, you need to edit the `stratumHost` value from `config_docker.json` and `address` value from the `cpuchain_pool.json`.
+
+After editing those, run the pool via docker
+
+```bash
+docker compose up -d
+```
+
+Check out your pool at `http://localhost:8080`.
 
 ### Features
 
@@ -67,6 +176,7 @@ with their public key which NOMP uses to derive an address for any coin needed t
 
 
 #### Attack Mitigation
+
 * Detects and thwarts socket flooding (garbage data sent over socket in order to consume system resources).
 * Detects and thwarts zombie miners (botnet infected computers connecting to your server to use up sockets but not sending any shares).
 * Detects and thwarts invalid share attacks:
@@ -80,6 +190,7 @@ thread per connection, and clustering is also implemented so all CPU cores are t
 
 
 #### Security
+
 NOMP has some implicit security advantages for pool operators and miners:
 * Without a registration/login system, non-security-oriented miners reusing passwords across pools is no longer a concern.
 * Automated payouts by default and pool profits are sent to another address so pool wallets aren't plump with coins -
@@ -96,27 +207,14 @@ and by the NOMP Desktop app to retrieve a list of available coins (and version-b
 allow your own pool to connect upstream to a larger pool server. It will request work from the larger pool then
 redistribute the work to our own connected miners.
 
-
-### Community / Support
-IRC
-* Support / general discussion join #nomp: https://webchat.freenode.net/?channels=#nomp
-* Development discussion join #nomp-dev: https://webchat.freenode.net/?channels=#nomp-dev
-
-Join our subreddit [/r/nomp](http://reddit.com/r/nomp)!
-
-*Having problems getting the portal running due to some module dependency error?* It's probably because you
-didn't follow the instructions in this README. Please __read the usage instructions__ including [requirements](#requirements) and [downloading/installing](#1-downloading--installing). If you've followed the instructions completely and are still having problems then open an issue here on github or join our #nomp IRC channel and explain your problem :).
-
-Usage
-=====
-
-
 #### Requirements
+
 * Coin daemon(s) (find the coin's repo and build latest version from source)
-* [Node.js](http://nodejs.org/) v0.10+ ([follow these installation instructions](https://github.com/joyent/node/wiki/Installing-Node.js-via-package-manager))
+* [Node.js](http://nodejs.org/) v18.x+ ([follow these installation instructions](https://github.com/joyent/node/wiki/Installing-Node.js-via-package-manager))
 * [Redis](http://redis.io/) key-value store v2.6+ ([follow these instructions](http://redis.io/topics/quickstart))
 
 ##### Seriously
+
 Those are legitimate requirements. If you use old versions of Node.js or Redis that may come with your system package manager then you will have problems. Follow the linked instructions to get the last stable versions.
 
 
@@ -126,6 +224,7 @@ you are using - a good place to start with redis is [data persistence](http://re
 
 
 #### 0) Setting up coin daemon
+
 Follow the build/install instructions for your coin daemon. Your coin.conf file should end up looking something like this:
 ```
 daemon=1
@@ -148,9 +247,9 @@ a good pool operator. For starters be sure to read:
 Clone the repository and run `npm update` for all the dependencies to be installed:
 
 ```bash
-git clone https://github.com/zone117x/node-open-mining-portal.git nomp
-cd nomp
-npm update
+git clone https://github.com/cpuchain/cpuchain-nomp.git
+cd cpuchain-nomp
+npm install
 ```
 
 #### 2) Configuration
@@ -357,21 +456,17 @@ Description of options:
 ````javascript
 {
     "enabled": true, //Set this to false and a pool will not be created from this config file
-    "coin": "litecoin.json", //Reference to coin config file in 'coins' directory
+    "coin": "cpuchain.json", //Reference to coin config file in 'coins' directory
 
-    "address": "mi4iBXbBsydtcc5yFmsff2zCFVX4XG7qJc", //Address to where block rewards are given
+    "address": "CUiaeCbZ1JTFg2dPCEDiaknRknP5JJ13Ss", //Address to where block rewards are given
 
     /* Block rewards go to the configured pool wallet address to later be paid out to miners,
        except for a percentage that can go to, for examples, pool operator(s) as pool fees or
        or to donations address. Addresses or hashed public keys can be used. Here is an example
        of rewards going to the main pool op, a pool co-owner, and NOMP donation. */
     "rewardRecipients": {
-        "n37vuNFkXfk15uFnGoVyHZ6PYQxppD3QqK": 1.5, //1.5% goes to pool op
-        "mirj3LtZxbSTharhtXvotqtJXUY7ki5qfx": 0.5, //0.5% goes to a pool co-owner
-
-        /* 0.1% donation to NOMP. This pubkey can accept any type of coin, please leave this in
-           your config to help support NOMP development. */
-        "22851477d63a085dbc2398c8430af1c09e7343f6": 0.1
+        "CUiaeCbZ1JTFg2dPCEDiaknRknP5JJ13Ss": 1.5, //1.5% goes to pool op
+        "CaetGgVtCaBxsuwXPwj1kkhnFbvmw1dSA1": 0.5, //0.5% goes to a pool co-owner
     },
 
     "paymentProcessing": {
@@ -392,7 +487,7 @@ Description of options:
            be able to confirm blocks or send out payments. */
         "daemon": {
             "host": "127.0.0.1",
-            "port": 19332,
+            "port": 19707,
             "user": "testuser",
             "password": "testpass"
         }
@@ -424,7 +519,7 @@ Description of options:
     "daemons": [
         {   //Main daemon instance
             "host": "127.0.0.1",
-            "port": 19332,
+            "port": 19707,
             "user": "testuser",
             "password": "testpass"
         }
@@ -441,7 +536,7 @@ Description of options:
         "host": "127.0.0.1",
 
         /* Port configured for daemon (this is the actual peer port not RPC port) */
-        "port": 19333,
+        "port": 19706,
 
         /* If your coin daemon is new enough (i.e. not a shitcoin) then it will support a p2p
            feature that prevents the daemon from spamming our peer node with unnecessary

@@ -1,0 +1,30 @@
+services:
+  redis:
+    container_name: redis
+    image: redis:6.2-alpine
+    restart: always
+    networks:
+      - cpuchain
+    expose:
+      - 6379
+    command: ["redis-server"]
+  cpuchain_nomp:
+    container_name: cpuchain_nomp
+    image: cpuchain/nomp:0.0.4
+    # Build if you want to customize the pool
+    # build:
+    #   context: .
+    restart: always
+    networks:
+      - cpuchain
+    ports:
+      - '8080:80'
+      - '3032:3032'
+    volumes:
+      - ./config_docker.json:/nomp/config.json
+      - ./cpuchain_pool.json:/nomp/pool_configs/cpuchain.json
+networks:
+  cpuchain:
+    name: cpuchain
+    external: true
+
