@@ -1,13 +1,7 @@
-var zlib = require('zlib');
-
 var redis = require('redis');
 var async = require('async');
 
-
-var os = require('os');
-
-var algos = require('stratum-pool/lib/algoProperties.js');
-
+var algos = require('./stratum/algoProperties.js');
 
 module.exports = function(logger, portalConfig, poolConfigs){
 

@@ -10,7 +10,7 @@ var PoolWorker = require('./libs/poolWorker.js');
 var PaymentProcessor = require('./libs/paymentProcessor.js');
 var Website = require('./libs/website.js');
 
-var algos = require('stratum-pool/lib/algoProperties.js');
+var algos = require('./libs/stratum/algoProperties.js');
 
 JSON.minify = JSON.minify || require("node-json-minify");
 

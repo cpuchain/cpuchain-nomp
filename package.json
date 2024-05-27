@@ -31,11 +31,12 @@
         "url": "https://github.com/zone117x/node-open-mining-portal.git"
     },
     "dependencies": {
-        "stratum-pool": "github:cpuchain/node-stratum-pool#d6c4272266ecacf89673d3b2fc2947c90a22ed60",
+        "multi-hashing": "github:cpuchain/node-multi-hashing#03a1b1799d5ab8fcc8ad163fe3f0e8abb03a25ca",
+        "bitcoinjs-lib": "*",
+        "base58-native": "*",
         "dateformat": "1.0.12",
         "node-json-minify": "*",
         "redis": "0.12.1",
-        "mysql": "*",
         "async": "1.5.2",
         "express": "*",
         "body-parser": "*",
