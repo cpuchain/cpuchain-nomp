@@ -3,15 +3,12 @@ var path = require('path');
 var os = require('os');
 var cluster = require('cluster');
 
-var async = require('async');
 var extend = require('extend');
 
 var PoolLogger = require('./libs/logUtil.js');
-var CliListener = require('./libs/cliListener.js');
 var PoolWorker = require('./libs/poolWorker.js');
 var PaymentProcessor = require('./libs/paymentProcessor.js');
 var Website = require('./libs/website.js');
-var ProfitSwitch = require('./libs/profitSwitch.js');
 
 var algos = require('stratum-pool/lib/algoProperties.js');
 
@@ -78,13 +75,6 @@ if (cluster.isWorker){
             break;
         case 'website':
             new Website(logger);
-            break;
-        case 'profitSwitch':
-            new ProfitSwitch(logger);
-            break;
-        case 'switchingPaymentProcessor':
-            var SwitchingPaymentProcessor = require('./libs/switchingPaymentProcessor.js');
-            new SwitchingPaymentProcessor(logger);
             break;
     }
 
@@ -267,126 +257,6 @@ var spawnPoolWorkers = function(){
 
 };
 
-
-var startCliListener = function(){
-
-    var cliPort = portalConfig.cliPort;
-
-    var listener = new CliListener(cliPort);
-    listener.on('log', function(text){
-        logger.debug('Master', 'CLI', text);
-    }).on('command', function(command, params, options, reply){
-
-        switch(command){
-            case 'blocknotify':
-                Object.keys(cluster.workers).forEach(function(id) {
-                    cluster.workers[id].send({type: 'blocknotify', coin: params[0], hash: params[1]});
-                });
-                reply('Pool workers notified');
-                break;
-            case 'coinswitch':
-                processCoinSwitchCommand(params, options, reply);
-                break;
-            case 'reloadpool':
-                Object.keys(cluster.workers).forEach(function(id) {
-                    cluster.workers[id].send({type: 'reloadpool', coin: params[0] });
-                });
-                reply('reloaded pool ' + params[0]);
-                break;
-            default:
-                reply('unrecognized command "' + command + '"');
-                break;
-        }
-    }).start();
-};
-
-
-var processCoinSwitchCommand = function(params, options, reply){
-
-    var logSystem = 'CLI';
-    var logComponent = 'coinswitch';
-
-    var replyError = function(msg){
-        reply(msg);
-        logger.error(logSystem, logComponent, msg);
-    };
-
-    if (!params[0]) {
-        replyError('Coin name required');
-        return;
-    }
-
-    if (!params[1] && !options.algorithm){
-        replyError('If switch key is not provided then algorithm options must be specified');
-        return;
-    }
-    else if (params[1] && !portalConfig.switching[params[1]]){
-        replyError('Switch key not recognized: ' + params[1]);
-        return;
-    }
-    else if (options.algorithm && !Object.keys(portalConfig.switching).filter(function(s){
-        return portalConfig.switching[s].algorithm === options.algorithm;
-    })[0]){
-        replyError('No switching options contain the algorithm ' + options.algorithm);
-        return;
-    }
-
-    var messageCoin = params[0].toLowerCase();
-    var newCoin = Object.keys(poolConfigs).filter(function(p){
-        return p.toLowerCase() === messageCoin;
-    })[0];
-
-    if (!newCoin){
-        replyError('Switch message to coin that is not recognized: ' + messageCoin);
-        return;
-    }
-
-
-    var switchNames = [];
-
-    if (params[1]) {
-        switchNames.push(params[1]);
-    }
-    else{
-        for (var name in portalConfig.switching){
-            if (portalConfig.switching[name].enabled && portalConfig.switching[name].algorithm === options.algorithm)
-                switchNames.push(name);
-        }
-    }
-
-    switchNames.forEach(function(name){
-        if (poolConfigs[newCoin].coin.algorithm !== portalConfig.switching[name].algorithm){
-            replyError('Cannot switch a '
-                + portalConfig.switching[name].algorithm
-                + ' algo pool to coin ' + newCoin + ' with ' + poolConfigs[newCoin].coin.algorithm + ' algo');
-            return;
-        }
-
-        Object.keys(cluster.workers).forEach(function (id) {
-            cluster.workers[id].send({type: 'coinswitch', coin: newCoin, switchName: name });
-        });
-    });
-
-    reply('Switch message sent to pool workers');
-
-};
-
-var startSwitchingPaymentProcessor = function(){
-    if (!fs.existsSync('libs/switchingPaymentProcessor.js')) return;
-
-    var worker = cluster.fork({
-        workerType: 'switchingPaymentProcessor',
-        pools: JSON.stringify(poolConfigs),
-        portalConfig: JSON.stringify(portalConfig)
-    });
-    worker.on('exit', function(code, signal){
-        logger.error('Master', 'Switching Payment Processor', 'Died, spawning replacement...');
-        setTimeout(function(){
-            startSwitchingPaymentProcessor();
-        }, 2000);
-    });
-};
-
 var startPaymentProcessor = function(){
 
     var enabledForAny = false;
@@ -433,27 +303,6 @@ var startWebsite = function(){
 };
 
 
-var startProfitSwitch = function(){
-
-    if (!portalConfig.profitSwitch || !portalConfig.profitSwitch.enabled){
-        //logger.error('Master', 'Profit', 'Profit auto switching disabled');
-        return;
-    }
-
-    var worker = cluster.fork({
-        workerType: 'profitSwitch',
-        pools: JSON.stringify(poolConfigs),
-        portalConfig: JSON.stringify(portalConfig)
-    });
-    worker.on('exit', function(code, signal){
-        logger.error('Master', 'Profit', 'Profit switching process died, spawning replacement...');
-        setTimeout(function(){
-            startWebsite(portalConfig, poolConfigs);
-        }, 2000);
-    });
-};
-
-
 
 (function init(){
 
@@ -463,12 +312,6 @@ var startProfitSwitch = function(){
 
     startPaymentProcessor();
 
-    startSwitchingPaymentProcessor();
-
     startWebsite();
-
-    startProfitSwitch();
-
-    startCliListener();
 
 })();

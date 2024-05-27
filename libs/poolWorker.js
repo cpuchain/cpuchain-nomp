@@ -2,7 +2,6 @@ var Stratum = require('stratum-pool');
 var redis   = require('redis');
 var net     = require('net');
 
-var MposCompatibility = require('./mposCompatibility.js');
 var ShareProcessor = require('./shareProcessor.js');
 
 module.exports = function(logger){
@@ -135,25 +134,8 @@ module.exports = function(logger){
             diff: function(){}
         };
 
-        //Functions required for MPOS compatibility
-        if (poolOptions.mposMode && poolOptions.mposMode.enabled){
-            var mposCompat = new MposCompatibility(logger, poolOptions);
-
-            handlers.auth = function(port, workerName, password, authCallback){
-                mposCompat.handleAuth(workerName, password, authCallback);
-            };
-
-            handlers.share = function(isValidShare, isValidBlock, data){
-                mposCompat.handleShare(isValidShare, isValidBlock, data);
-            };
-
-            handlers.diff = function(workerName, diff){
-                mposCompat.handleDifficultyUpdate(workerName, diff);
-            }
-        }
-
         //Functions required for internal payment processing
-        else{
+        {
 
             var shareProcessor = new ShareProcessor(logger, portalConfig, poolOptions, singleCoinPayoutPorts);
 
