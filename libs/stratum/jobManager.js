@@ -1,8 +1,6 @@
 var events = require('events');
 var crypto = require('crypto');
 
-var bignum = require('bignum');
-
 
 
 var util = require('./util.js');
@@ -58,7 +56,7 @@ var JobManager = module.exports = function JobManager(options){
     //public members
 
     this.extraNonceCounter = new ExtraNonceCounter(options.instanceId);
-    this.extraNoncePlaceholder = new Buffer('f000000ff111111f', 'hex');
+    this.extraNoncePlaceholder = Buffer.from('f000000ff111111f', 'hex');
     this.extraNonce2Size = this.extraNoncePlaceholder.length - this.extraNonceCounter.size;
 
     this.currentJob;
@@ -215,8 +213,8 @@ var JobManager = module.exports = function JobManager(options){
         }
 
 
-        var extraNonce1Buffer = new Buffer(extraNonce1, 'hex');
-        var extraNonce2Buffer = new Buffer(extraNonce2, 'hex');
+        var extraNonce1Buffer = Buffer.from(extraNonce1, 'hex');
+        var extraNonce2Buffer = Buffer.from(extraNonce2, 'hex');
 
         var coinbaseBuffer = job.serializeCoinbase(extraNonce1Buffer, extraNonce2Buffer);
         var coinbaseHash = coinbaseHasher(coinbaseBuffer);
@@ -225,18 +223,18 @@ var JobManager = module.exports = function JobManager(options){
 
         var headerBuffer = job.serializeHeader(merkleRoot, nTime, nonce);
         var headerHash = hashDigest(headerBuffer, nTimeInt);
-        var headerBigNum = bignum.fromBuffer(headerHash, {endian: 'little', size: 32});
+        var headerBigNum = BigInt(`0x${headerHash.reverse().toString('hex')}`);
 
         var blockHashInvalid;
         var blockHash;
         var blockHex;
 
-        var shareDiff = diff1 / headerBigNum.toNumber() * shareMultiplier;
+        var shareDiff = diff1 / Number(headerBigNum) * shareMultiplier;
 
         var blockDiffAdjusted = job.difficulty * shareMultiplier;
 
         //Check if share is a block candidate (matched network difficulty)
-        if (job.target.ge(headerBigNum)){
+        if (BigInt(job.target) >= headerBigNum){
             blockHex = job.serializeBlock(headerBuffer, coinbaseBuffer).toString('hex');
             blockHash = blockHasher(headerBuffer, nTime).toString('hex');
         }

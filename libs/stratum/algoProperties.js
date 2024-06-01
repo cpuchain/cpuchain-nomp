@@ -1,4 +1,3 @@
-var bignum = require('bignum');
 var multiHashing = require('multi-hashing');
 var util = require('./util.js');
 
@@ -127,7 +126,7 @@ var algos = module.exports = global.algos = {
         hash: function(coinConfig){
             if (coinConfig.normalHashing === true) {
                 return function (data, nTimeInt) {
-                    return multiHashing.keccak(multiHashing.keccak(Buffer.concat([data, new Buffer(nTimeInt.toString(16), 'hex')])));
+                    return multiHashing.keccak(multiHashing.keccak(Buffer.concat([data, Buffer.from(nTimeInt.toString(16), 'hex')])));
                 };
             }
             else {
@@ -205,19 +204,4 @@ var algos = module.exports = global.algos = {
 for (var algo in algos){
     if (!algos[algo].multiplier)
         algos[algo].multiplier = 1;
-
-    /*if (algos[algo].diff){
-        algos[algo].maxDiff = bignum(algos[algo].diff, 16);
-    }
-    else if (algos[algo].shift){
-        algos[algo].nonTruncatedDiff = util.shiftMax256Right(algos[algo].shift);
-        algos[algo].bits = util.bufferToCompactBits(algos[algo].nonTruncatedDiff);
-        algos[algo].maxDiff = bignum.fromBuffer(util.convertBitsToBuff(algos[algo].bits));
-    }
-    else if (algos[algo].multiplier){
-        algos[algo].maxDiff = diff1.mul(Math.pow(2, 32) / algos[algo].multiplier);
-    }
-    else{
-        algos[algo].maxDiff = diff1;
-    }*/
 }

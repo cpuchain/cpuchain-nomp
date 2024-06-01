@@ -1,5 +1,3 @@
-var bignum = require('bignum');
-
 var merkleTree = require('./merkleTree.js');
 var transactions = require('./transactions.js');
 var util = require('./util.js');
@@ -32,12 +30,12 @@ var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, pool
     }
 
     function getVoteData(){
-        if (!rpcData.masternode_payments) return new Buffer([]);
+        if (!rpcData.masternode_payments) return Buffer.alloc(0);
 
         return Buffer.concat(
             [util.varIntBuffer(rpcData.votes.length)].concat(
                 rpcData.votes.map(function (vt) {
-                    return new Buffer(vt, 'hex');
+                    return Buffer.from(vt, 'hex');
                 })
             )
         );
@@ -50,18 +48,18 @@ var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, pool
 
 
     this.target = rpcData.target ?
-        bignum(rpcData.target, 16) :
+        BigInt(`0x${rpcData.target}`) :
         util.bignumFromBitsHex(rpcData.bits);
 
-    this.difficulty = parseFloat((diff1 / this.target.toNumber()).toFixed(9));
+    this.difficulty = parseFloat((diff1 / Number(this.target)).toFixed(9));
 
 
 
 
 
-    this.prevHashReversed = util.reverseByteOrder(new Buffer(rpcData.previousblockhash, 'hex')).toString('hex');
+    this.prevHashReversed = util.reverseByteOrder(Buffer.from(rpcData.previousblockhash, 'hex')).toString('hex');
     this.transactionData = Buffer.concat(rpcData.transactions.map(function(tx){
-        return new Buffer(tx.data, 'hex');
+        return Buffer.from(tx.data, 'hex');
     }));
     this.merkleTree = new merkleTree(getTransactionBuffers(rpcData.transactions));
     this.merkleBranch = getMerkleHashes(this.merkleTree.steps);
@@ -87,8 +85,7 @@ var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, pool
 
     //https://en.bitcoin.it/wiki/Protocol_specification#Block_Headers
     this.serializeHeader = function(merkleRoot, nTime, nonce){
-
-        var header =  new Buffer(80);
+        var header =  Buffer.alloc(80);
         var position = 0;
         header.write(nonce, position, 4, 'hex');
         header.write(rpcData.bits, position += 4, 4, 'hex');
@@ -111,7 +108,7 @@ var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, pool
             getVoteData(),
 
             //POS coins require a zero byte appended to block which the daemon replaces with the signature
-            new Buffer(reward === 'POS' ? [0] : [])
+            Buffer.from(reward === 'POS' ? [0] : [])
         ]);
     };
 
