@@ -652,7 +652,7 @@ var pool = module.exports = function pool(options, authorizeFn){
         async.filter(
             stratumClients,
             filterFn,
-            function (clientsToRelinquish) {
+            function (err, clientsToRelinquish) {
                 clientsToRelinquish.forEach(function(cObj) {
                     cObj.client.removeAllListeners();
                     _this.stratumServer.removeStratumClientBySubId(cObj.subId);

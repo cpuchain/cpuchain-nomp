@@ -97,7 +97,7 @@ module.exports = function(logger){
                     oldPool.relinquishMiners(
                         function (miner, cback) { 
                             // relinquish miners that are attached to one of the "Auto-switch" ports and leave the others there.
-                            cback(proxyPorts.indexOf(miner.client.socket.localPort.toString()) !== -1)
+                            cback(null, proxyPorts.indexOf(miner.client.socket.localPort.toString()) !== -1)
                         }, 
                         function (clients) {
                             newPool.attachMiners(clients);

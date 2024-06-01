@@ -21,9 +21,9 @@ module.exports = function(logger){
 
     async.filter(enabledPools, function(coin, callback){
         SetupForPool(logger, poolConfigs[coin], function(setupResults){
-            callback(setupResults);
+            callback(null, setupResults);
         });
-    }, function(coins){
+    }, function(err, coins){
         coins.forEach(function(coin){
 
             var poolOptions = poolConfigs[coin];
