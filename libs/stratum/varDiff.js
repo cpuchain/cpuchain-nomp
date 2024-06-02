@@ -1,23 +1,18 @@
-var events = require('events');
+const events = require('events');
 
 /*
-
-Vardiff ported from stratum-mining share-limiter
+ Vardiff ported from stratum-mining share-limiter
  https://github.com/ahmedbodi/stratum-mining/blob/master/mining/basic_share_limiter.py
-
  */
-
-
-function RingBuffer(maxSize){
-    var data = [];
-    var cursor = 0;
-    var isFull = false;
+function RingBuffer(maxSize) {
+    let data = [];
+    let cursor = 0;
+    let isFull = false;
     this.append = function(x){
-        if (isFull){
+        if (isFull) {
             data[cursor] = x;
             cursor = (cursor + 1) % maxSize;
-        }
-        else{
+        } else {
             data.push(x);
             cursor++;
             if (data.length === maxSize){
@@ -27,7 +22,7 @@ function RingBuffer(maxSize){
         }
     };
     this.avg = function(){
-        var sum = data.reduce(function(a, b){ return a + b });
+        const sum = data.reduce(function(a, b){ return a + b });
         return sum / (isFull ? maxSize : cursor);
     };
     this.size = function(){
@@ -45,38 +40,31 @@ function toFixed(num, len) {
     return parseFloat(num.toFixed(len));
 }
 
-var varDiff = module.exports = function varDiff(port, varDiffOptions){
-    var _this = this;
+const varDiff = function(port, varDiffOptions) {
+    const _this = this;
 
-    var bufferSize, tMin, tMax;
+    port = Number(port);
 
-    //if (!varDiffOptions) return;
+    const variance = varDiffOptions.targetTime * (varDiffOptions.variancePercent / 100);
 
-    var variance = varDiffOptions.targetTime * (varDiffOptions.variancePercent / 100);
+    const bufferSize = varDiffOptions.retargetTime / varDiffOptions.targetTime * 4;
+    const tMin       = varDiffOptions.targetTime - variance;
+    const tMax       = varDiffOptions.targetTime + variance;
 
-    
-    bufferSize = varDiffOptions.retargetTime / varDiffOptions.targetTime * 4;
-    tMin       = varDiffOptions.targetTime - variance;
-    tMax       = varDiffOptions.targetTime + variance;
+    this.manageClient = function(client) {
 
+        const stratumPort = client.socket.localPort;
 
-
-    this.manageClient = function(client){
-
-        var stratumPort = client.socket.localPort;
-
-        if (stratumPort != port) {
+        if (stratumPort !== port) {
             console.error("Handling a client which is not of this vardiff?");
         }
-        var options = varDiffOptions;
+        const options = varDiffOptions;
 
-        var lastTs;
-        var lastRtc;
-        var timeBuffer;
+        let lastTs, lastRtc, timeBuffer;
 
         client.on('submit', function(){
 
-            var ts = (Date.now() / 1000) | 0;
+            const ts = (Date.now() / 1000) | 0;
 
             if (!lastRtc){
                 lastRtc = ts - options.retargetTime / 2;
@@ -85,7 +73,7 @@ var varDiff = module.exports = function varDiff(port, varDiffOptions){
                 return;
             }
 
-            var sinceLast = ts - lastTs;
+            const sinceLast = ts - lastTs;
 
             timeBuffer.append(sinceLast);
             lastTs = ts;
@@ -94,8 +82,8 @@ var varDiff = module.exports = function varDiff(port, varDiffOptions){
                 return;
 
             lastRtc = ts;
-            var avg = timeBuffer.avg();
-            var ddiff = options.targetTime / avg;
+            const avg = timeBuffer.avg();
+            const ddiff = options.targetTime / avg;
 
             if (avg > tMax && client.difficulty > options.minDiff) {
                 if (options.x2mode) {
@@ -108,7 +96,7 @@ var varDiff = module.exports = function varDiff(port, varDiffOptions){
                 if (options.x2mode) {
                     ddiff = 2;
                 }
-                var diffMax = options.maxDiff;
+                const diffMax = options.maxDiff;
                 if (ddiff * client.difficulty > diffMax) {
                     ddiff = diffMax / client.difficulty;
                 }
@@ -124,3 +112,4 @@ var varDiff = module.exports = function varDiff(port, varDiffOptions){
     };
 };
 varDiff.prototype.__proto__ = events.EventEmitter.prototype;
+module.exports = varDiff;

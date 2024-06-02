@@ -1,9 +1,9 @@
-var multiHashing = require('multi-hashing');
-var util = require('./util.js');
+const multiHashing = require('multi-hashing');
+const util = require('./util.js');
 
-var diff1 = global.diff1 = 0x00000000ffff0000000000000000000000000000000000000000000000000000;
+global.diff1 = 0x00000000ffff0000000000000000000000000000000000000000000000000000;
 
-var algos = module.exports = global.algos = {
+const algos = module.exports = global.algos = {
     sha256: {
         //Uncomment diff if you want to use hardcoded truncated diff
         //diff: '00000000ffff0000000000000000000000000000000000000000000000000000',
@@ -18,8 +18,8 @@ var algos = module.exports = global.algos = {
         //diff: '0000ffff00000000000000000000000000000000000000000000000000000000',
         multiplier: Math.pow(2, 16),
         hash: function(coinConfig){
-            var nValue = coinConfig.nValue || 1024;
-            var rValue = coinConfig.rValue || 1;
+            const nValue = coinConfig.nValue || 1024;
+            const rValue = coinConfig.rValue || 1;
             return function(data){
                 return multiHashing.scrypt(data,nValue,rValue);
             }
@@ -31,8 +31,8 @@ var algos = module.exports = global.algos = {
         //diff: '0000ffff00000000000000000000000000000000000000000000000000000000',
         multiplier: Math.pow(2, 16),
         hash: function(coinConfig){
-            var nValue = coinConfig.nValue || 64;
-            var rValue = coinConfig.rValue || 1;
+            const nValue = coinConfig.nValue || 64;
+            const rValue = coinConfig.rValue || 1;
             return function(data){
                 return multiHashing.scrypt(data,nValue,rValue);
             }
@@ -41,9 +41,9 @@ var algos = module.exports = global.algos = {
     'scrypt-jane': {
         multiplier: Math.pow(2, 16),
         hash: function(coinConfig){
-            var nTimestamp = coinConfig.chainStartTime || 1367991200;
-            var nMin = coinConfig.nMin || 4;
-            var nMax = coinConfig.nMax || 30;
+            const nTimestamp = coinConfig.chainStartTime || 1367991200;
+            const nMin = coinConfig.nMin || 4;
+            const nMax = coinConfig.nMax || 30;
             return function(data, nTime){
                 return multiHashing.scryptjane(data, nTime, nTimestamp, nMin, nMax);
             }
@@ -53,17 +53,17 @@ var algos = module.exports = global.algos = {
         multiplier: Math.pow(2, 16),
         hash: function(coinConfig){
 
-            var timeTable = coinConfig.timeTable || {
+            const timeTable = coinConfig.timeTable || {
                 "2048": 1389306217, "4096": 1456415081, "8192": 1506746729, "16384": 1557078377, "32768": 1657741673,
                 "65536": 1859068265, "131072": 2060394857, "262144": 1722307603, "524288": 1769642992
             };
 
-            var nFactor = (function(){
-                var n = Object.keys(timeTable).sort().reverse().filter(function(nKey){
+            const nFactor = (function(){
+                const n = Object.keys(timeTable).sort().reverse().filter(function(nKey){
                     return Date.now() / 1000 > timeTable[nKey];
                 })[0];
 
-                var nInt = parseInt(n);
+                const nInt = parseInt(n);
                 return Math.log(nInt) / Math.log(2);
             })();
 
@@ -191,17 +191,17 @@ var algos = module.exports = global.algos = {
     cpupower: {
         multiplier: Math.pow(2, 16),
         hash: function(coinConfig){
-            var nValue = coinConfig.nValue || 2048;
-            var rValue = coinConfig.rValue || 32;
-            return function(data){
-                return multiHashing.cpupower(data,nValue,rValue);
+            const nValue = coinConfig.nValue || 2048;
+            const rValue = coinConfig.rValue || 32;
+            return function(data) {
+                return multiHashing.cpupower(data, nValue, rValue);
             }
         }
     }
 };
 
 
-for (var algo in algos){
+for (const algo in algos){
     if (!algos[algo].multiplier)
         algos[algo].multiplier = 1;
 }

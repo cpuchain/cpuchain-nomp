@@ -1,27 +1,24 @@
-var merkleTree = require('./merkleTree.js');
-var transactions = require('./transactions.js');
-var util = require('./util.js');
-
+const merkleTree = require('./merkleTree.js');
+const transactions = require('./transactions.js');
+const util = require('./util.js');
 
 /**
  * The BlockTemplate class holds a single job.
  * and provides several methods to validate and submit it to the daemon coin
 **/
-var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, poolAddressScript, extraNoncePlaceholder, reward, txMessages, recipients, network){
-
+module.exports = function BlockTemplate(jobId, rpcData, poolAddressScript, extraNoncePlaceholder, reward, txMessages, recipients, network) {
     //private members
+    const submits = [];
 
-    var submits = [];
-
-    function getMerkleHashes(steps){
+    function getMerkleHashes(steps) {
         return steps.map(function(step){
             return step.toString('hex');
         });
     }
 
-    function getTransactionBuffers(txs){
-        var txHashes = txs.map(function(tx){
-            if (tx.txid !== undefined) {
+    function getTransactionBuffers(txs) {
+        const txHashes = txs.map(function(tx){
+            if (tx.txid) {
                 return util.uint256BufferFromHash(tx.txid);
             }
             return util.uint256BufferFromHash(tx.hash);
@@ -29,8 +26,10 @@ var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, pool
         return [null].concat(txHashes);
     }
 
-    function getVoteData(){
-        if (!rpcData.masternode_payments) return Buffer.alloc(0);
+    function getVoteData() {
+        if (!rpcData.masternode_payments) {
+            return Buffer.alloc(0);
+        }
 
         return Buffer.concat(
             [util.varIntBuffer(rpcData.votes.length)].concat(
@@ -42,23 +41,17 @@ var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, pool
     }
 
     //public members
-
     this.rpcData = rpcData;
     this.jobId = jobId;
 
-
-    this.target = rpcData.target ?
-        BigInt(`0x${rpcData.target}`) :
-        util.bignumFromBitsHex(rpcData.bits);
+    this.target = rpcData.target
+        ? BigInt(`0x${rpcData.target}`)
+        : util.bignumFromBitsHex(rpcData.bits);
 
     this.difficulty = parseFloat((diff1 / Number(this.target)).toFixed(9));
 
-
-
-
-
     this.prevHashReversed = util.reverseByteOrder(Buffer.from(rpcData.previousblockhash, 'hex')).toString('hex');
-    this.transactionData = Buffer.concat(rpcData.transactions.map(function(tx){
+    this.transactionData = Buffer.concat(rpcData.transactions.map(function(tx) {
         return Buffer.from(tx.data, 'hex');
     }));
     this.merkleTree = new merkleTree(getTransactionBuffers(rpcData.transactions));
@@ -73,7 +66,7 @@ var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, pool
         network
     );
 
-    this.serializeCoinbase = function(extraNonce1, extraNonce2){
+    this.serializeCoinbase = function(extraNonce1, extraNonce2) {
         return Buffer.concat([
             this.generationTransaction[0],
             extraNonce1,
@@ -82,38 +75,33 @@ var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, pool
         ]);
     };
 
-
     //https://en.bitcoin.it/wiki/Protocol_specification#Block_Headers
-    this.serializeHeader = function(merkleRoot, nTime, nonce){
-        var header =  Buffer.alloc(80);
-        var position = 0;
+    this.serializeHeader = function(merkleRoot, nTime, nonce) {
+        const header = Buffer.alloc(80);
+        let position = 0;
         header.write(nonce, position, 4, 'hex');
         header.write(rpcData.bits, position += 4, 4, 'hex');
         header.write(nTime, position += 4, 4, 'hex');
         header.write(merkleRoot, position += 4, 32, 'hex');
         header.write(rpcData.previousblockhash, position += 32, 32, 'hex');
         header.writeUInt32BE(rpcData.version, position + 32);
-        var header = util.reverseBuffer(header);
-        return header;
+        return util.reverseBuffer(header);
     };
 
-    this.serializeBlock = function(header, coinbase){
+    this.serializeBlock = function(header, coinbase) {
         return Buffer.concat([
             header,
-
             util.varIntBuffer(this.rpcData.transactions.length + 1),
             coinbase,
             this.transactionData,
-
             getVoteData(),
-
             //POS coins require a zero byte appended to block which the daemon replaces with the signature
             Buffer.from(reward === 'POS' ? [0] : [])
         ]);
     };
 
-    this.registerSubmit = function(extraNonce1, extraNonce2, nTime, nonce){
-        var submission = extraNonce1 + extraNonce2 + nTime + nonce;
+    this.registerSubmit = function(extraNonce1, extraNonce2, nTime, nonce) {
+        const submission = extraNonce1 + extraNonce2 + nTime + nonce;
         if (submits.indexOf(submission) === -1){
             submits.push(submission);
             return true;
@@ -121,7 +109,7 @@ var BlockTemplate = module.exports = function BlockTemplate(jobId, rpcData, pool
         return false;
     };
 
-    this.getJobParams = function(){
+    this.getJobParams = function() {
         if (!this.jobParams){
             this.jobParams = [
                 this.jobId,
