@@ -8,9 +8,22 @@
     "mainnet": {
       "bech32": "cpu",
       "bip32": {
-        "public": "0488B21E"
+        "public": "0488b21e",
+        "private": "0488ade4"
       },
       "pubKeyHash": "1C",
-      "scriptHash": "1E"
+      "scriptHash": "1E",
+      "wif": "80"
+    },
+
+    "testnet": {
+      "bech32": "tcpu",
+      "bip32": {
+        "public": "043587CF",
+        "private": "04358394"
+      },
+      "pubKeyHash": "6F",
+      "scriptHash": "C4",
+      "wif": "EF"
     }
 }

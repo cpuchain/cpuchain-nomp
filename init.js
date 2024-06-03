@@ -143,6 +143,9 @@ var buildPoolConfigs = function(){
             poolOptions.coin.mainnet.scriptHash = Buffer.from(coinProfile.mainnet.scriptHash, 'hex').readUInt8(0);
         }
         if (coinProfile.testnet) {
+            if (poolOptions.testnet) {
+                poolOptions.coin.name += '_testnet';
+            }
             poolOptions.coin.testnet.bip32.public = Buffer.from(coinProfile.testnet.bip32.public, 'hex').readUInt32LE(0);
             poolOptions.coin.testnet.pubKeyHash = Buffer.from(coinProfile.testnet.pubKeyHash, 'hex').readUInt8(0);
             poolOptions.coin.testnet.scriptHash = Buffer.from(coinProfile.testnet.scriptHash, 'hex').readUInt8(0);
