@@ -1,8 +1,8 @@
-var http = require('http');
-var cp = require('child_process');
-var events = require('events');
+const http = require('http');
+const https = require('https');
+const events = require('events');
 
-var async = require('async');
+const async = require('async');
 
 /**
  * The daemon interface interacts with the coin daemon by using the rpc interface.
@@ -49,7 +49,7 @@ function DaemonInterface(daemons, logger){
 
 
     function performHttpRequest(instance, jsonData, callback){
-        var options = {
+        const options = {
             hostname: (typeof(instance.host) === 'undefined' ? '127.0.0.1' : instance.host),
             port    : instance.port,
             method  : 'POST',
@@ -58,6 +58,12 @@ function DaemonInterface(daemons, logger){
                 'Content-Length': jsonData.length
             }
         };
+
+        // https endpoints would likely use self signed certificate so we don't really verify their certificates
+        // certificate verification would only make sense for public endpoints but what would happen when you host your RPC on public :)
+        if (instance.https) {
+            options.rejectUnauthorized = false;
+        }
 
         var parseJson = function(res, data){
             var dataJson;
@@ -85,7 +91,7 @@ function DaemonInterface(daemons, logger){
                 callback(dataJson.error, dataJson, data);
         };
 
-        var req = http.request(options, function(res) {
+        var req = (instance.https ? https : http).request(options, function(res) {
             var data = '';
             res.setEncoding('utf8');
             res.on('data', function (chunk) {

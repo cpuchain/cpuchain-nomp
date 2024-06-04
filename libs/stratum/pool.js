@@ -65,6 +65,7 @@ var pool = module.exports = function pool(options, authorizeFn){
 
         GetBlockTemplate(function(error, result){
             if (error) {
+                console.log(error);
                 emitErrorLog('Error with getblocktemplate on creating first job, server cannot start');
                 return;
             }
@@ -290,6 +291,7 @@ var pool = module.exports = function pool(options, authorizeFn){
                 options.feePercent += percent;
             }
             catch(e){
+                console.log(e)
                 emitErrorLog('Error generating transaction output script for ' + r + ' in rewardRecipients');
             }
         }

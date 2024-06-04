@@ -114,7 +114,10 @@ var buildPoolConfigs = function(){
                 }
             }
 
-            if (poolConfigFiles[f].coin === poolConfigFiles[i].coin){
+            const poolNameA = poolConfigFiles[f].testnet ? poolConfigFiles[f].coin + '_testnet' : poolConfigFiles[f].coin
+            const poolNameB = poolConfigFiles[i].testnet ? poolConfigFiles[i].coin + '_testnet' : poolConfigFiles[i].coin
+
+            if (poolNameA === poolNameB) {
                 logger.error('Master', poolConfigFiles[f].fileName, 'Pool has same configured coin file coins/' + poolConfigFiles[f].coin + ' as ' + poolConfigFiles[i].fileName + ' pool');
                 process.exit(1);
                 return;

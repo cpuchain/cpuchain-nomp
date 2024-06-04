@@ -15,8 +15,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -s && \
 
 WORKDIR /nomp
 
-COPY . .
+COPY ["package.json", "./"]
 
 RUN npm install
+
+COPY . .
 
 ENTRYPOINT ["node", "init.js"]
