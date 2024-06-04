@@ -7,16 +7,11 @@ RUN apt-get update \
     python3-dev \
     ca-certificates \
     nano \
-    wget \
     curl \
-    bash \
-    libsodium-dev \
-    libgmp3-dev \
-    libssl-dev
+    bash
 
-RUN apt-add-repository -y ppa:rael-gc/rvm && \
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -s && \
-  apt-get install -y libssl1.0-dev nodejs
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -s && \
+  apt-get install -y nodejs
 
 WORKDIR /nomp
 
@@ -25,4 +20,3 @@ COPY . .
 RUN npm install
 
 ENTRYPOINT ["node", "init.js"]
-
