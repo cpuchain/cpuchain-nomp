@@ -1,6 +1,9 @@
 const crypto = require('crypto');
 const base58 = require('bs58check');
 const bitcoin = require('bitcoinjs-lib');
+const ecc = require('@bitcoinerlab/secp256k1');
+
+bitcoin.initEccLib(ecc);
 
 exports.addressFromEx = function(exAddress, ripdm160Key) {
     try {
