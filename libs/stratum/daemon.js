@@ -123,7 +123,6 @@ function DaemonInterface(daemons, logger){
      */
 
     function batchCmd(cmdArray, callback){
-
         var requestJson = [];
 
         for (var i = 0; i < cmdArray.length; i++){
@@ -139,20 +138,28 @@ function DaemonInterface(daemons, logger){
         performHttpRequest(instances[0], serializedRequest, function(error, result){
             callback(error, result);
         });
+    }
 
+    function batchCmdAsync(cmdArray) {
+        return new Promise((resolve, reject) => {
+            batchCmd(cmdArray, (error, result) => {
+                if (error) {
+                    reject(error)
+                } else {
+                    resolve(result)
+                }
+            })
+        })
     }
 
     /* Sends a JSON RPC (http://json-rpc.org/wiki/specification) command to every configured daemon.
        The callback function is fired once with the result from each daemon unless streamResults is
        set to true. */
     function cmd(method, params, callback, streamResults, returnRawData){
-
         var results = [];
 
         async.each(instances, function(instance, eachCallback){
-
             var itemFinished = function(error, result, data){
-
                 var returnObj = {
                     error: error,
                     response: (result || {}).result,
@@ -174,14 +181,19 @@ function DaemonInterface(daemons, logger){
             performHttpRequest(instance, requestJson, function(error, result, data){
                 itemFinished(error, result, data);
             });
-
-
         }, function(){
             if (!streamResults){
                 callback(results);
             }
         });
+    }
 
+    function cmdAsync(method, params) {
+        return new Promise((resolve) => {
+            cmd(method, params, (results) => {
+                resolve(results)
+            })
+        })
     }
 
 
@@ -190,7 +202,9 @@ function DaemonInterface(daemons, logger){
     this.init = init;
     this.isOnline = isOnline;
     this.cmd = cmd;
+    this.cmdAsync = cmdAsync;
     this.batchCmd = batchCmd;
+    this.batchCmdAsync = batchCmdAsync;
 }
 
 DaemonInterface.prototype.__proto__ = events.EventEmitter.prototype;

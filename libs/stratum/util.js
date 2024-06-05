@@ -5,6 +5,12 @@ const ecc = require('@bitcoinerlab/secp256k1');
 
 bitcoin.initEccLib(ecc);
 
+exports.sleep = function(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    })
+}
+
 exports.addressFromEx = function(exAddress, ripdm160Key) {
     try {
         const versionByte = exports.getVersionByte(exAddress);

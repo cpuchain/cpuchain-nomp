@@ -228,7 +228,6 @@ var spawnPoolWorkers = function(){
             workerType: 'pool',
             forkId: forkId,
             pools: serializedConfigs,
-            portalConfig: JSON.stringify(portalConfig)
         });
         worker.forkId = forkId;
         worker.type = 'pool';

@@ -1,7 +1,5 @@
 var redis = require('redis');
 
-
-
 /*
 This module deals with handling shares when in internal payment processing mode. It connects to a redis
 database and inserts shares with the database structure of:
@@ -11,14 +9,9 @@ value: a hash with..
         key:
 
  */
-
-
-
-module.exports = function(logger, portalConfig, poolConfig, singleCoinPayoutPorts){
-
+module.exports = function(logger, poolConfig){
     var redisConfig = poolConfig.redis;
     var coin = poolConfig.coin.name;
-
 
     var forkId = process.env.forkId;
     var logSystem = 'Pool';
@@ -64,28 +57,11 @@ module.exports = function(logger, portalConfig, poolConfig, singleCoinPayoutPort
         }
     });
 
-
     this.handleShare = function(isValidShare, isValidBlock, shareData){
-
-
-        /*var shareKey = (function(){
-            var port = shareData.port.toString();
-            for (var switchName in portalConfig.switching){
-                if (!portalConfig.switching[switchName]['singleCoinPayout']) continue;
-                var ports = Object.keys(portalConfig.switching[switchName].ports);
-                if (ports.indexOf(port) !== -1) return switchName;
-            }
-            return coin;
-        })();*/
-
-        var shareKey = singleCoinPayoutPorts[shareData.port] || coin;
-
-        // console.log('share key ' + shareKey);
-
         var redisCommands = [];
 
         if (isValidShare){
-            redisCommands.push(['hincrbyfloat', shareKey + ':shares:roundCurrent', shareData.worker, shareData.difficulty]);
+            redisCommands.push(['hincrbyfloat', coin + ':shares:roundCurrent', shareData.worker, shareData.difficulty]);
             redisCommands.push(['hincrby', coin + ':stats', 'validShares', 1]);
         }
         else{
@@ -111,8 +87,5 @@ module.exports = function(logger, portalConfig, poolConfig, singleCoinPayoutPort
             if (err)
                 logger.error(logSystem, logComponent, logSubCat, 'Error with share processor multi ' + JSON.stringify(err));
         });
-
-
     };
-
 };
