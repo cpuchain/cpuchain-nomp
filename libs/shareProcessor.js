@@ -85,10 +85,16 @@ module.exports = function(logger, poolConfig){
 
         const dateNow = Date.now();
 
-        let [lastShareTime, lastStartTime] = await multiAsync([
+        let [lastShareTime, lastStartTime, allPendingBlocks] = await multiAsync([
             ['hget', `${coin}:lastShareTimes`, workerAddress],
             ['hget', `${coin}:lastStartTimes`, workerAddress],
-        ]).then(r => r.map(n => Number(n)));
+            ['smembers', `${coin}:blocksPending`],
+        ]);
+
+        lastShareTime = Number(lastShareTime);
+        lastStartTime = Number(lastStartTime);
+        // blockhash of all pending blocks
+        allPendingBlocks = new Set(allPendingBlocks.map(b => b.split(':')[0]));
 
         // did they just join in this round?
         if (!lastStartTime) {
@@ -125,13 +131,17 @@ module.exports = function(logger, poolConfig){
         var hashrateData = [ isValidShare ? shareData.difficulty : -shareData.difficulty, shareData.worker, dateNow / 1000 | 0];
         redisCommands.push(['zadd', coin + ':hashrate', dateNow / 1000 | 0, hashrateData.join(':')]);
 
-        if (isValidBlock){
+        /**
+         * Prevent miner to submit a duplicated block (duplicated height would be okay since we filter them on paymentProcessor)
+         */
+        if (allPendingBlocks.has(shareData.blockHash)) {
+            logger.warning(logSystem, logComponent, logSubCat, `Miner ${shareData.worker} has submitted a duplicated block ${shareData.blockHash}, ignoring it`);
+        } else if (isValidBlock) {
             redisCommands.push(['rename', coin + ':shares:roundCurrent', coin + ':shares:round' + shareData.height]);
             redisCommands.push(['rename', coin + ':shares:timesCurrent', coin + ':shares:times' + shareData.height]);
             redisCommands.push(['sadd', coin + ':blocksPending', [shareData.blockHash, shareData.txHash, shareData.height, shareData.worker, dateNow / 1000 | 0].join(':')]);
             redisCommands.push(['hincrby', coin + ':stats', 'validBlocks', 1]);
-        }
-        else if (shareData.blockHash){
+        } else if (shareData.blockHash) {
             redisCommands.push(['hincrby', coin + ':stats', 'invalidBlocks', 1]);
         }
 
