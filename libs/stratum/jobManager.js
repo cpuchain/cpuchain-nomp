@@ -111,7 +111,8 @@ const JobManager = module.exports = function JobManager(options) {
             options.coin.reward,
             options.coin.txMessages,
             options.recipients,
-            options.network
+            options.network,
+            options.coinbaseString
         );
 
         _this.currentJob = tmpBlockTemplate;
@@ -147,7 +148,8 @@ const JobManager = module.exports = function JobManager(options) {
             options.coin.reward,
             options.coin.txMessages,
             options.recipients,
-            options.network
+            options.network,
+            options.coinbaseString
         );
 
         this.currentJob = tmpBlockTemplate;

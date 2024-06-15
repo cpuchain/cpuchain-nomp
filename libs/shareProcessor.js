@@ -1,4 +1,4 @@
-var redis = require('redis');
+const redis = require('redis');
 
 /*
 This module deals with handling shares when in internal payment processing mode. It connects to a redis
@@ -9,6 +9,14 @@ value: a hash with..
         key:
 
  */
+
+function roundTo(n, digits = 0) {
+    var multiplicator = Math.pow(10, digits);
+    n = parseFloat((n * multiplicator).toFixed(11));
+    var test =(Math.round(n) / multiplicator);
+    return +(test.toFixed(digits));
+}
+
 module.exports = function(logger, poolConfig){
     var redisConfig = poolConfig.redis;
     var coin = poolConfig.coin.name;
@@ -57,8 +65,52 @@ module.exports = function(logger, poolConfig){
         }
     });
 
-    this.handleShare = function(isValidShare, isValidBlock, shareData){
+    this.handleShare = async function(isValidShare, isValidBlock, shareData) {
+    try {
         var redisCommands = [];
+
+        const multiAsync = (commands) => {
+            return new Promise((resolve, reject) => {
+                connection.multi(commands).exec((err, replies) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(replies);
+                    }
+                })
+            })
+        }
+
+        const workerAddress = String(shareData.worker).split(".")[0];
+
+        const dateNow = Date.now();
+
+        let [lastShareTime, lastStartTime] = await multiAsync([
+            ['hget', `${coin}:lastShareTimes`, workerAddress],
+            ['hget', `${coin}:lastStartTimes`, workerAddress],
+        ]).then(r => r.map(n => Number(n)));
+
+        // did they just join in this round?
+        if (!lastStartTime) {
+            logger.debug(logSystem, logComponent, logSubCat, `PPLNT: ${workerAddress} joined`);
+            redisCommands.push(['hset', `${coin}:lastStartTimes`, workerAddress, dateNow]);
+            lastShareTime = dateNow;
+            lastStartTime = dateNow;
+        }
+
+        // if its been less than 15 minutes since last share was submitted
+        const timeChangeSec = roundTo(Math.max(dateNow - lastShareTime, 0) / 1000, 4);
+        if (timeChangeSec < 900) {
+            // loyal miner keeps mining :)
+            redisCommands.push(['hincrbyfloat', coin + ':shares:timesCurrent', workerAddress, timeChangeSec]);
+        } else {
+            // they just re-joined the pool
+            logger.debug(logSystem, logComponent, logSubCat, `PPLNT: ${workerAddress} rejoined`);
+            redisCommands.push(['hset', `${coin}:lastStartTimes`, workerAddress, dateNow]);
+        }
+
+        // track last time share
+        redisCommands.push(['hset', `${coin}:lastShareTimes`, workerAddress, dateNow]);
 
         if (isValidShare){
             redisCommands.push(['hincrbyfloat', coin + ':shares:roundCurrent', shareData.worker, shareData.difficulty]);
@@ -70,22 +122,25 @@ module.exports = function(logger, poolConfig){
         /* Stores share diff, worker, and unique value with a score that is the timestamp. Unique value ensures it
            doesn't overwrite an existing entry, and timestamp as score lets us query shares from last X minutes to
            generate hashrate for each worker and pool. */
-        var dateNow = Date.now();
-        var hashrateData = [ isValidShare ? shareData.difficulty : -shareData.difficulty, shareData.worker, dateNow];
+        var hashrateData = [ isValidShare ? shareData.difficulty : -shareData.difficulty, shareData.worker, dateNow / 1000 | 0];
         redisCommands.push(['zadd', coin + ':hashrate', dateNow / 1000 | 0, hashrateData.join(':')]);
 
         if (isValidBlock){
             redisCommands.push(['rename', coin + ':shares:roundCurrent', coin + ':shares:round' + shareData.height]);
-            redisCommands.push(['sadd', coin + ':blocksPending', [shareData.blockHash, shareData.txHash, shareData.height].join(':')]);
+            redisCommands.push(['rename', coin + ':shares:timesCurrent', coin + ':shares:times' + shareData.height]);
+            redisCommands.push(['sadd', coin + ':blocksPending', [shareData.blockHash, shareData.txHash, shareData.height, shareData.worker, dateNow / 1000 | 0].join(':')]);
             redisCommands.push(['hincrby', coin + ':stats', 'validBlocks', 1]);
         }
         else if (shareData.blockHash){
             redisCommands.push(['hincrby', coin + ':stats', 'invalidBlocks', 1]);
         }
 
-        connection.multi(redisCommands).exec(function(err, replies){
-            if (err)
-                logger.error(logSystem, logComponent, logSubCat, 'Error with share processor multi ' + JSON.stringify(err));
-        });
+        await multiAsync(redisCommands);
+
+        logger.debug(logSystem, logComponent, logSubCat, `Updated share in ${Date.now() - dateNow} ms`);
+    } catch (error) {
+        logger.error(logSystem, logComponent, logSubCat, 'Error with share processor multi');
+        console.log(error);
+    }
     };
 };

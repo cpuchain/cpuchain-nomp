@@ -242,6 +242,15 @@ exports.addressToScript = function(network, addr) {
     }
 };
 
+exports.checkAddress = function(network, addr) {
+    try {
+        bitcoin.address.toOutputScript(addr, network);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 exports.getReadableHashRateString = function(hashrate) {
     let i = -1;
     const byteUnits = [ ' KH', ' MH', ' GH', ' TH', ' PH' ];

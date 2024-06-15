@@ -99,7 +99,7 @@ const generateOutputTransactions = function(poolRecipient, recipients, rpcData, 
 };
 
 
-exports.CreateGeneration = function(rpcData, publicKey, extraNoncePlaceholder, reward, txMessages, recipients, network) {
+exports.CreateGeneration = function(rpcData, publicKey, extraNoncePlaceholder, reward, txMessages, recipients, network, coinbaseString) {
     const txInputsCount = 1;
     const txOutputsCount = 1;
     const txVersion = txMessages === true ? 2 : 1;
@@ -125,7 +125,7 @@ exports.CreateGeneration = function(rpcData, publicKey, extraNoncePlaceholder, r
         Buffer.from([extraNoncePlaceholder.length])
     ]);
 
-    const scriptSigPart2 = util.serializeString('/nodeStratum/');
+    const scriptSigPart2 = util.serializeString(coinbaseString || '/nodeStratum/');
 
     const p1 = Buffer.concat([
         util.packUInt32LE(txVersion),

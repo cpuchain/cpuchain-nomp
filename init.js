@@ -9,6 +9,7 @@ var PoolLogger = require('./libs/logUtil.js');
 var PoolWorker = require('./libs/poolWorker.js');
 var PaymentProcessor = require('./libs/paymentProcessor.js');
 var Website = require('./libs/website.js');
+const StatsUpdaterFactory = require('./libs/statsUpdater');
 
 var algos = require('./libs/stratum/algoProperties.js');
 
@@ -76,6 +77,9 @@ if (cluster.isWorker){
         case 'website':
             new Website(logger);
             break;
+        case 'statsUpdater':
+            new StatsUpdaterFactory(logger);
+            break;
     }
 
     return;
@@ -139,6 +143,7 @@ var buildPoolConfigs = function(){
 
         var coinProfile = JSON.parse(JSON.minify(fs.readFileSync(coinFilePath, {encoding: 'utf8'})));
         poolOptions.coin = coinProfile;
+        poolOptions.coin.fullName = poolOptions.coin.name;
         poolOptions.coin.name = poolOptions.coin.name.toLowerCase();
         if (coinProfile.mainnet) {
             poolOptions.coin.mainnet.bip32.public = Buffer.from(coinProfile.mainnet.bip32.public, 'hex').readUInt32LE(0);
@@ -148,6 +153,8 @@ var buildPoolConfigs = function(){
         if (coinProfile.testnet) {
             if (poolOptions.testnet) {
                 poolOptions.coin.name += '_testnet';
+                poolOptions.coin.fullName += ' Testnet';
+                poolOptions.coin.explorer = poolOptions.coin.testnet.explorer;
             }
             poolOptions.coin.testnet.bip32.public = Buffer.from(coinProfile.testnet.bip32.public, 'hex').readUInt32LE(0);
             poolOptions.coin.testnet.pubKeyHash = Buffer.from(coinProfile.testnet.pubKeyHash, 'hex').readUInt8(0);
@@ -279,7 +286,8 @@ var startPaymentProcessor = function(){
 
     var worker = cluster.fork({
         workerType: 'paymentProcessor',
-        pools: JSON.stringify(poolConfigs)
+        pools: JSON.stringify(poolConfigs),
+        portalConfig: JSON.stringify(portalConfig)
     });
     worker.on('exit', function(code, signal){
         logger.error('Master', 'Payment Processor', 'Payment processor died, spawning replacement...');
@@ -294,20 +302,66 @@ var startWebsite = function(){
 
     if (!portalConfig.website.enabled) return;
 
+    var numForks = (function(){
+        if (!portalConfig.clustering || !portalConfig.clustering.enabled)
+            return 1;
+        if (portalConfig.clustering.forks === 'auto')
+            return os.cpus().length;
+        if (!portalConfig.clustering.forks || isNaN(portalConfig.clustering.forks))
+            return 1;
+        return portalConfig.clustering.forks;
+    })();
+
+    function createWebsiteWorker(forkId) {
+        var worker = cluster.fork({
+            workerType: 'website',
+            forkId,
+            pools: JSON.stringify(poolConfigs),
+            portalConfig: JSON.stringify(portalConfig)
+        });
+        worker.forkId = forkId;
+        worker.type = 'website';
+        worker.on('exit', function(code, signal){
+            logger.error('Master', 'Website', `Website ${forkId} process died, spawning replacement...`);
+            setTimeout(function(){
+                createWebsiteWorker(forkId);
+            }, 2000);
+        });
+    }
+
+    let i = 0;
+
+    while (i < numForks) {
+        createWebsiteWorker(i);
+        ++i;
+    }
+
+    logger.debug('Master', 'WebsiteSpawner', `Spawned ${i} website workers`);
+};
+
+function startStatsUpdater() {
     var worker = cluster.fork({
-        workerType: 'website',
+        workerType: 'statsUpdater',
         pools: JSON.stringify(poolConfigs),
         portalConfig: JSON.stringify(portalConfig)
     });
     worker.on('exit', function(code, signal){
-        logger.error('Master', 'Website', 'Website process died, spawning replacement...');
+        logger.error('Master', 'StatsUpdater', 'StatsUpdater process died, spawning replacement...');
         setTimeout(function(){
-            startWebsite(portalConfig, poolConfigs);
+            startStatsUpdater(portalConfig, poolConfigs);
         }, 2000);
+    }).on('message', function(msg){
+        switch(msg.type) {
+            case 'stats':
+                Object.keys(cluster.workers).forEach(function(id) {
+                    if (cluster.workers[id].type === 'website') {
+                        cluster.workers[id].send({type: 'stats', stats: msg.stats});
+                    }
+                });
+                break;
+        }
     });
 };
-
-
 
 (function init(){
 
@@ -318,5 +372,7 @@ var startWebsite = function(){
     startPaymentProcessor();
 
     startWebsite();
+
+    startStatsUpdater();
 
 })();

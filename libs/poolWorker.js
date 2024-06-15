@@ -1,5 +1,6 @@
-var Stratum = require('./stratum');
-var ShareProcessor = require('./shareProcessor.js');
+const Stratum = require('./stratum');
+const util = require('./stratum/util.js');
+const ShareProcessor = require('./shareProcessor.js');
 
 module.exports = function(logger){
     var poolConfigs  = JSON.parse(process.env.pools);
@@ -27,6 +28,8 @@ module.exports = function(logger){
         var logComponent = coin;
         var logSubCat = 'Thread ' + (parseInt(forkId) + 1);
 
+        const network = poolOptions.testnet ? poolOptions.coin.testnet : poolOptions.coin.mainnet;
+
         var shareProcessor = new ShareProcessor(logger, poolOptions);
 
         var handlers = {
@@ -45,14 +48,18 @@ module.exports = function(logger){
                     authCallback(false);
                 }
             } else {
-                var daemon = pool.daemon;
+                const parts = String(workerName).split('.');
+                const address = parts[0];
+                const workerId = parts.slice(1).join('');
 
-                daemon.cmd('validateaddress', [workerName], function (results) {
-                    var isValid = results.filter(function (r) {
-                        return r.response.isvalid
-                    }).length > 0;
-                    authCallback(isValid);
-                });
+                // Test if workerId is only a combination of alphabetical letters or numbers or underbar to prevent XSS
+                if (workerId && !(new RegExp(/^([a-z]|[A-Z]|[0-9]|-|_){0,20}$/).test(workerId))) {
+                    authCallback(false);
+                    return;
+                }
+
+                // Check worker's address by bitcoinjs-lib to avoid DDOS against daemon
+                authCallback(util.checkAddress(network, address));
             }
         };
 

@@ -8,6 +8,8 @@ services:
     expose:
       - 6379
     command: ["redis-server"]
+    volumes:
+      - ./redis:/data
   cpuchain_nomp:
     container_name: cpuchain_nomp
     image: cpuchain/nomp:0.0.4

@@ -193,7 +193,7 @@
                     host: it.portalConfig.website.stratumHost
                 }).replace(/"/g, '&quot;');
             }}
-            <a href="#" class="poolOption" data-info="{{=info}}">{{=pool}}</a>
+            <a href="#" class="poolOption" data-info="{{=info}}">{{=it.poolsConfigs[pool].coin.fullName}}</a>
             {{ } }}
         </div>
     </div>

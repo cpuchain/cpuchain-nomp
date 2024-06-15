@@ -46,8 +46,8 @@
         "ioredis": "^5.4.1",
         "multi-hashing": "github:cpuchain/node-multi-hashing#218bfdf38b440d274d2d77f6dff7fd45bae530ab",
         "node-json-minify": "^3.0.0",
-        "node-watch": "^0.7.4",
-        "redis": "^3.1.2"
+        "redis": "^3.1.2",
+        "ws": "^8.17.0"
     },
     "engines": {
         "node": ">=18.x"

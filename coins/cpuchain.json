@@ -5,6 +5,10 @@
     "peerMagic": "deadbeef",
     "peerMagicTestnet": "faceb00c",
 
+    "decimals": 8,
+    "blockTime": 60,
+    "explorer": "https://explorer.cpuchain.org/#",
+
     "mainnet": {
       "bech32": "cpu",
       "bip32": {
@@ -24,6 +28,7 @@
       },
       "pubKeyHash": "6F",
       "scriptHash": "C4",
-      "wif": "EF"
+      "wif": "EF",
+      "explorer": "https://explorer.cpuchain.org/testnet/#"
     }
 }

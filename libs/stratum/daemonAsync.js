@@ -53,7 +53,7 @@ class DaemonAsync {
     const result = await this.fetch(this.daemon, JSON.stringify(requestJson));
 
     if (result.error) {
-      throw new Error(result.error);
+      throw new Error(JSON.stringify(result.error));
     }
 
     return result.result;
@@ -74,13 +74,13 @@ class DaemonAsync {
     const results = await this.fetch(this.daemon, JSON.stringify(requestJson));
 
     if (results.error) {
-      throw new Error(results.error);
+      throw new Error(JSON.stringify(results.error));
     }
 
     return results.map(({ result, error }) => {
       if (error) {
         if (throwError) {
-          throw new Error(error)
+          throw new Error(error);
         }
         return {
           ...(result || {}),

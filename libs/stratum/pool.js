@@ -296,7 +296,7 @@ var pool = module.exports = function pool(options, authorizeFn){
             }
         }
         if (recipients.length === 0){
-            emitErrorLog('No rewardRecipients have been setup which means no fees will be taken');
+            emitWarningLog('No rewardRecipients have been setup which means no fees will be taken');
         }
         options.recipients = recipients;
     }

@@ -6,7 +6,7 @@ const util = require('./util.js');
  * The BlockTemplate class holds a single job.
  * and provides several methods to validate and submit it to the daemon coin
 **/
-module.exports = function BlockTemplate(jobId, rpcData, poolAddressScript, extraNoncePlaceholder, reward, txMessages, recipients, network) {
+module.exports = function BlockTemplate(jobId, rpcData, poolAddressScript, extraNoncePlaceholder, reward, txMessages, recipients, network, coinbaseString) {
     //private members
     const submits = [];
 
@@ -63,7 +63,8 @@ module.exports = function BlockTemplate(jobId, rpcData, poolAddressScript, extra
         reward,
         txMessages,
         recipients,
-        network
+        network,
+        coinbaseString
     );
 
     this.serializeCoinbase = function(extraNonce1, extraNonce2) {

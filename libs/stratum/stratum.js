@@ -148,7 +148,8 @@ const StratumClient = function(options) {
     }
 
     function handleSubmit(message) {
-        if (!_this.authorized){
+        // Check if the message is from the authorized worker
+        if (!_this.authorized || message.params[1] && _this.workerName !== message.params[0]){
             sendJson({
                 id    : message.id,
                 result: null,
@@ -169,7 +170,7 @@ const StratumClient = function(options) {
         // https://github.com/ROZ-MOFUMOFU-ME/node-stratum-pool/commit/49f9ff045184b064fdd112c5871b17c2601fc29e
         _this.emit('submit',
             {
-                name        : message.params[0],
+                name        : _this.workerName,
                 jobId       : message.params[1],
                 extraNonce2 : message.params[2],
                 nTime       : String(message.params[3]).toLowerCase(),
