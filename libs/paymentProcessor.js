@@ -44,7 +44,7 @@ async function processPayments(pool) {
     function satoshisToCoins(satoshis) {
         return Number((satoshis / magnitude).toFixed(decimals));
     }
-    
+
     function coinsToSatoshies(coins) {
         return coins * magnitude;
     }
@@ -155,7 +155,7 @@ async function processPayments(pool) {
 
     Object.keys(workerBalances || {}).forEach(workerId => {
         const balance = coinsToSatoshies(Number(workerBalances[workerId] || 0));
-            
+
         workers[workerId] = {
             balance
         };
@@ -165,7 +165,7 @@ async function processPayments(pool) {
         ...(blocksPending || [])
             .map((r) => {
                 const details = r.split(':');
-                    
+
                 return {
                     blockHash: details[0],
                     txHash: details[1],
@@ -247,7 +247,7 @@ async function processPayments(pool) {
             } else {
                 round.category = generationTx.category;
                 round.confirmations = confirmations;
-                    
+
                 if (round.category === 'generate' || round.category === 'immature') {
                     round.reward = Number(generationTx.amount || generationTx.value);
                 }
@@ -277,7 +277,7 @@ async function processPayments(pool) {
         return round;
     });
 
-    logger.debug(logSystem, logComponent, 
+    logger.debug(logSystem, logComponent,
         `Payment info: Kicked rounds: ${kickedRounds.length}, `
             + `Orphaned rounds: ${orphanedRounds.length}, `
             + `Immature rounds: ${immatureRounds.length}, `
@@ -303,7 +303,7 @@ async function processPayments(pool) {
                 ])
                 .flat()
         );
-        
+
         chunk(redisRounds, 2).forEach(([workerShares, workerTimes]) => {
             allWorkerShares.push(workerShares);
             allWorkerTimes.push(workerTimes);
@@ -354,15 +354,16 @@ async function processPayments(pool) {
 
                     if (workerTime) {
                         const timePeriod = roundTo(workerTime / maxTime, 2);
-                        
+
                         if (timePeriod && timePeriod < pplntTimeQualify) {
                             const tshares = shares;
                             const lost = shares - (shares * timePeriod);
                             shares = Math.max(shares - lost, 0);
-                            
+
                             logger.warning(logSystem, logComponent,
                                 `PPLNT: Reduced shares for ${workerAddress} `
                                 + `round: ${round.height} `
+                                + `workerTime: ${workerTime} `
                                 + `maxTime: ${maxTime} `
                                 + `sec timePeriod: ${timePeriod.toFixed(6)} `
                                 + `shares: ${tshares} `
@@ -372,7 +373,7 @@ async function processPayments(pool) {
                         }
 
                         if (timePeriod > 1) {
-                            logger.error(logSystem, logComponent, 
+                            logger.error(logSystem, logComponent,
                                 `Time share period is greater than 1.0 for ${workerAddress}`
                                 + `round: ${round.height} `
                                 + `blockHash: ${round.blockHash}`
@@ -648,7 +649,7 @@ class PaymentProcessor {
             logger[severity](logSystem, logComponent, message);
         });
         const redisClient = redis.createClient(poolOptions.redis.port, poolOptions.redis.host);
-    
+
         const daemonAsync = new DaemonAsync(processingConfig.daemon);
 
         this.logger = logger;
@@ -665,7 +666,7 @@ class PaymentProcessor {
 
         this.daemon = daemon;
         this.redisClient = redisClient;
-    
+
         this.daemonAsync = daemonAsync;
 
         this.historicalRetention = portalConfig.website.stats.historicalRetention;
@@ -709,14 +710,14 @@ class PaymentProcessorFactory {
     constructor(logger) {
         const poolConfigs = JSON.parse(process.env.pools);
         const portalConfig = JSON.parse(process.env.portalConfig);
-        
+
         const enabledPools = Object.keys(poolConfigs).reduce((acc, coin) => {
             const poolOptions = poolConfigs[coin];
-    
+
             if (poolOptions.paymentProcessing?.enabled) {
                 acc.push(coin);
             }
-    
+
             return acc;
         }, []);
 
