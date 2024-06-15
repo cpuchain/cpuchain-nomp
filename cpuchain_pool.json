@@ -2,6 +2,7 @@
     "enabled": true,
     "coin": "cpuchain.json",
     "address": "",
+    "coinbaseString": "/CPU-NOMP/",
     "rewardRecipients": {
         "": 1.0
     },
@@ -9,6 +10,10 @@
         "enabled": true,
         "paymentInterval": 600,
         "minimumPayment": 0.1,
+        "fallbackFeeRate": 0.00001,
+        "feeMultiplier": 2,
+        "paymentMode": "pplnt",
+        "pplnt": 0.51,
         "daemon": {
             "host": "cpuchain_node1",
             "port": 19707,
