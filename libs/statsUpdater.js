@@ -300,9 +300,9 @@ async function coinUpdater(logger, portalConfig, poolConfig) {
             acc[address].luckHours = ((networkHashRate / acc[address].hashrate * blockTime) / (60 * 60)).toFixed(3);
             acc[address].luckMinute = ((networkHashRate / acc[address].hashrate * blockTime) / (60)).toFixed(3);
 
-            acc[address].balance = Number(balances[workerId] || 0);
-            acc[address].immature = Number(immatures[workerId] || 0);
-            acc[address].paid = Number(payouts[workerId] || 0);
+            acc[address].balance = Number(balances[address] || 0);
+            acc[address].immature = Number(immatures[address] || 0);
+            acc[address].paid = Number(payouts[address] || 0);
 
             return acc;
         }, {});
