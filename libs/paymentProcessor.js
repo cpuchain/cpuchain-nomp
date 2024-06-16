@@ -571,7 +571,11 @@ async function processPayments(pool) {
 
     if (totalSent) {
         logger.debug(logSystem, logComponent,
-            `Sent out a total of ${totalSent} to ${Object.keys(addressAmounts).length} miners (TxFee Per Miner: ${satoshisToCoins(txFees)}) (txid: ${txid})`);
+            `Sent out a total of ${totalSent} to ${Object.keys(addressAmounts).length} miners `
+            + `(From Rewards: ${confirmedPayouts}) `
+            + `(From Balances: ${balancePayouts}) `
+            + `(TxFee Per Miner: ${satoshisToCoins(txFees)}) `
+            + `(txid: ${txid})`);
     }
 
     showInterval();
