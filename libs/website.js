@@ -104,6 +104,38 @@ module.exports = function(logger){
         }
     }
 
+    async function ApiMiniHistory(res) {
+        try {
+            const history = await getHistory();
+
+            const miniHistory = history.map(({time, pools}) => {
+                pools = Object.keys(pools).reduce((acc, coin) => {
+                    const pool = pools[coin];
+
+                    acc[coin] = {
+                        hashrate: pool.hashrate,
+                        workerCount: pool.workerCount,
+                        blocks: pool.blocks,
+                    }
+
+                    return acc;
+                }, {});
+
+                return {
+                    time,
+                    pools
+                }
+            });
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(miniHistory));
+        } catch (error) {
+            logger.error(logSystem, 'Historics', logSubCat, 'Error when trying to grab historical stats');
+            console.log(error);
+            res.status(500).send(error.stack || error.message);
+        }
+    }
+
     async function ApiBlocks(res) {
         try {
             const stats = await getStats();
@@ -215,8 +247,11 @@ module.exports = function(logger){
         case 'stats':
             ApiStats(res);
             return;
-        case 'pool_stats':
+        case 'all_stats':
             ApiHistory(res);
+            return;
+        case 'pool_stats':
+            ApiMiniHistory(res);
             return;
         case 'blocks':
             ApiBlocks(res);

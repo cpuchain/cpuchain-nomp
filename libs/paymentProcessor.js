@@ -131,16 +131,19 @@ async function processPayments(pool) {
         blocks.
     */
     const rounds = [];
-    const workers = {};
+    const miners = {};
 
-    let workerBalances, blocksPending;
+    let minerBalances, blocksPending;
 
     try {
         startRedisTimer();
-        [workerBalances, blocksPending] = await multiAsync([
+        [minerBalances, blocksPending] = await multiAsync([
             ['hgetall', coin + ':balances'],
             ['smembers', coin + ':blocksPending']
         ]);
+        if (!minerBalances) {
+            minerBalances = {};
+        }
         endRedisTimer();
     } catch (error) {
         logger.error(logSystem, logComponent, 'Could not get blocks from redis');
@@ -148,12 +151,8 @@ async function processPayments(pool) {
         throw error;
     }
 
-    Object.keys(workerBalances || {}).forEach(workerId => {
-        const balance = coinsToSatoshies(Number(workerBalances[workerId] || 0));
-
-        workers[workerId] = {
-            balance
-        };
+    Object.keys(minerBalances).forEach(miner => {
+        minerBalances[miner] = coinsToSatoshies(Number(minerBalances[miner] || 0));
     });
 
     rounds.push(
@@ -338,14 +337,16 @@ async function processPayments(pool) {
 
             let totalShares = 0;
 
+            const minerShares = {};
+
             Object.keys(workerShares).forEach(workerId => {
-                const worker = workers[workerId] = (workers[workerId] || {});
+                const minerAddress = getProperAddress(workerId);
+                const miner = miners[minerAddress] = (miners[minerAddress] || {});
                 // PROP shares
                 let shares = Number(workerShares[workerId] || 0);
                 // PPLNT share calculation
                 if (pplntEnabled && maxTime) {
-                    const workerAddress = workerId.split('.')[0];
-                    const workerTime = Number(workerTimes[workerAddress] || 0);
+                    const workerTime = Number(workerTimes[minerAddress] || 0);
 
                     if (workerTime) {
                         const timePeriod = floorTo(workerTime / maxTime, 2);
@@ -360,7 +361,7 @@ async function processPayments(pool) {
                             const tshares = shares;
 
                             logger.warning(logSystem, logComponent,
-                                `PPLNT: Reduced shares for ${workerAddress} `
+                                `PPLNT: Reduced shares for ${minerAddress} `
                                 + `round: ${round.height} `
                                 + `workerTime: ${workerTime} `
                                 + `maxTime: ${maxTime} `
@@ -374,37 +375,31 @@ async function processPayments(pool) {
 
                         if (timePeriod > 1) {
                             logger.error(logSystem, logComponent,
-                                `Time share period is greater than 1.0 for ${workerAddress}`
+                                `Time share period is greater than 1.0 for ${minerAddress}`
                                 + `round: ${round.height} `
                                 + `blockHash: ${round.blockHash}`
                             );
                             return;
                         }
-
-                        worker.timePeriod = timePeriod;
                     }
                 }
 
-                workerShares[workerId] = shares;
-                worker.totalShares = (worker.totalShares || 0) + shares;
+                minerShares[minerAddress] = (minerShares[minerAddress] || 0) + shares;
+                miner.totalShares = (miner.totalShares || 0) + shares;
                 totalShares += shares;
             });
 
             round.totalShares = totalShares;
 
-            let accRewards = 0;
-
-            Object.keys(workerShares).forEach(workerId => {
-                const worker = workers[workerId];
-                const percent = workerShares[workerId] / totalShares;
-                const workerRewardTotal = Math.floor(reward * percent);
-
-                accRewards += workerRewardTotal;
+            Object.keys(minerShares).forEach(minerAddress => {
+                const miner = miners[minerAddress];
+                const percent = minerShares[minerAddress] / totalShares;
+                const minerRewardTotal = Math.floor(reward * percent);
 
                 if (round.category === 'immature') {
-                    worker.immature = (worker.immature || 0) + workerRewardTotal;
+                    miner.immature = (miner.immature || 0) + minerRewardTotal;
                 } else if (round.category === 'generate') {
-                    worker.reward = (worker.reward || 0) + workerRewardTotal;
+                    miner.reward = (miner.reward || 0) + minerRewardTotal;
                 }
             });
         }
@@ -425,37 +420,35 @@ async function processPayments(pool) {
     let totalShares = 0;
 
     // Fees applied with estimated input size + output size divided by miners count
-    const txFees = calculateFee(confirmedRounds.length, Object.keys(workers).length);
+    const txFees = calculateFee(confirmedRounds.length, Object.keys(miners).length);
 
     const confirmedPayouts = confirmedRounds.reduce((acc, curr) => acc + curr.reward, 0);
     let balancePayouts = 0;
 
-    Object.keys(workers).forEach(workerId => {
-        const worker = workers[workerId];
+    Object.keys(miners).forEach(minerAddress => {
+        const miner = miners[minerAddress];
 
-        const workerBalance = worker.balance || 0;
-        const workerRewards = worker.reward || 0;
+        const minerBalance = Number(minerBalances[minerAddress] || 0);
+        const minerReward = miner.reward || 0;
 
-        const toSend = workerBalance + workerRewards - txFees;
-
-        worker.address = getProperAddress(workerId);
+        const toSend = minerBalance + minerReward - txFees;
 
         if (toSend >= minPaymentSatoshis) {
-            worker.sent = satoshisToCoins(toSend);
-            worker.balanceChange = Math.min(workerBalance, toSend) * -1;
+            miner.sent = satoshisToCoins(toSend);
+            miner.balanceChange = Math.min(minerBalance, toSend) * -1;
 
-            addressAmounts[worker.address] = floorCoins((addressAmounts[worker.address] || 0) + worker.sent);
+            addressAmounts[minerAddress] = floorCoins((addressAmounts[minerAddress] || 0) + miner.sent);
         } else {
-            worker.sent = 0;
-            worker.balanceChange = Math.max(toSend - workerBalance, 0);
+            miner.sent = 0;
+            miner.balanceChange = Math.max(toSend - minerBalance, 0);
 
-            balanceAmounts[worker.address] = floorCoins((balanceAmounts[worker.address] || 0) + satoshisToCoins(worker.balanceChange));
+            balanceAmounts[minerAddress] = floorCoins((balanceAmounts[minerAddress] || 0) + satoshisToCoins(miner.balanceChange));
         }
 
-        totalSent += worker.sent;
-        balancePayouts += satoshisToCoins(workerBalance);
+        totalSent += miner.sent;
+        balancePayouts += satoshisToCoins(minerBalance);
 
-        shareAmounts[worker.address] = (shareAmounts[worker.address] || 0) + (worker.totalShares || 0);
+        shareAmounts[minerAddress] = (shareAmounts[minerAddress] || 0) + (miner.totalShares || 0);
     });
 
     if (totalSent > confirmedPayouts + balancePayouts) {
@@ -485,18 +478,18 @@ async function processPayments(pool) {
     const updateCommands = [];
     const roundsToDelete = [];
 
-    Object.keys(workers).forEach(workerId => {
-        const worker = workers[workerId];
-        if (worker.balanceChange) {
-            updateCommands.push(['hincrbyfloat', `${coin}:balances`, workerId, satoshisToCoins(worker.balanceChange)]);
+    Object.keys(miners).forEach(minerAddress => {
+        const miner = miners[minerAddress];
+        if (miner.balanceChange) {
+            updateCommands.push(['hincrbyfloat', `${coin}:balances`, minerAddress, satoshisToCoins(miner.balanceChange)]);
         }
-        if (worker.sent) {
-            updateCommands.push(['hincrbyfloat', `${coin}:payouts`, workerId, worker.sent]);
+        if (miner.sent) {
+            updateCommands.push(['hincrbyfloat', `${coin}:payouts`, minerAddress, miner.sent]);
         }
-        if (worker.immature) {
-            updateCommands.push(['hset', `${coin}:immature`, workerId, satoshisToCoins(worker.immature)]);
+        if (miner.immature) {
+            updateCommands.push(['hset', `${coin}:immature`, minerAddress, satoshisToCoins(miner.immature)]);
         } else {
-            updateCommands.push(['hset', `${coin}:immature`, workerId, 0]);
+            updateCommands.push(['hset', `${coin}:immature`, minerAddress, 0]);
         }
     });
 
@@ -578,7 +571,7 @@ async function processPayments(pool) {
 
     if (totalSent) {
         logger.debug(logSystem, logComponent,
-            `Sent out a total of ${totalSent} to ${Object.keys(addressAmounts).length} workers (TxFee Per Miner: ${satoshisToCoins(txFees)}) (txid: ${txid})`);
+            `Sent out a total of ${totalSent} to ${Object.keys(addressAmounts).length} miners (TxFee Per Miner: ${satoshisToCoins(txFees)}) (txid: ${txid})`);
     }
 
     showInterval();

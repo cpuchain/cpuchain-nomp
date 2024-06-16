@@ -203,8 +203,6 @@ function addWorkerToDisplay(name, htmlSafeName, workerObj) {
 	htmlToAdd+='<div><i class="fa fa-shield"></i> <small>Diff:</small> <span id="statsDiff'+htmlSafeName+'">'+workerObj.diff+'</span></div>';
 	htmlToAdd+='<div><i class="fa fa-cog"></i> <small>Shares:</small> <span id="statsShares'+htmlSafeName+'">'+(Math.round(workerObj.currRoundShares * 100) / 100)+'</span></div>';
 	htmlToAdd += '<div><i class="fa fa-gavel"></i> <small>Luck <span id="statsLuckDays' + htmlSafeName + '">' + getReadableLuckTime(workerObj.luckDays) +'</span></small></div>';
-	htmlToAdd+='<div><i class="fa fa-money-bill"></i> <small>Bal: <span id="statsBalance'+htmlSafeName+'">'+workerObj.balance+'</span></small></div>';
-	htmlToAdd+='<div><i class="fa fa-money-bill"></i> <small>Paid: <span id="statsPaid'+htmlSafeName+'">'+workerObj.paid+'</span></small></div>';
 	htmlToAdd+='</div></div></div>';
 	$("#boxesWorkers").html($("#boxesWorkers").html()+htmlToAdd);
 }

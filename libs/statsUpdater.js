@@ -191,10 +191,7 @@ async function coinUpdater(logger, portalConfig, poolConfig) {
                     hashrateString: '',
                     luckDays: '',
                     luckHours: '',
-                    luckMinute: '',
-                    balance: 0,
-                    immature: 0,
-                    paid: 0
+                    luckMinute: ''
                 };
             }
     
@@ -265,10 +262,6 @@ async function coinUpdater(logger, portalConfig, poolConfig) {
             worker.luckDays = ((networkHashRate / workerRate * blockTime) / (24 * 60 * 60)).toFixed(3);
             worker.luckHours = ((networkHashRate / workerRate * blockTime) / (60 * 60)).toFixed(3);
             worker.luckMinute = ((networkHashRate / workerRate * blockTime) / (60)).toFixed(3);
-
-            worker.balance = Number(balances[workerId] || 0);
-            worker.immature = Number(immatures[workerId] || 0);
-            worker.paid = Number(payouts[workerId] || 0);
         });
 
         const miners = Object.keys(workers).reduce((acc, workerId) => {
@@ -301,14 +294,15 @@ async function coinUpdater(logger, portalConfig, poolConfig) {
             acc[address].currRoundShares += worker.currRoundShares;
             acc[address].currRoundTime += worker.currRoundTime;
             acc[address].hashrate += worker.hashrate;
-            acc[address].balance += worker.balance;
-            acc[address].immature += worker.immature;
-            acc[address].paid += worker.paid;
 
             acc[address].hashrateString = getReadableNetworkHashRateString(acc[address].hashrate);
             acc[address].luckDays = ((networkHashRate / acc[address].hashrate * blockTime) / (24 * 60 * 60)).toFixed(3);
             acc[address].luckHours = ((networkHashRate / acc[address].hashrate * blockTime) / (60 * 60)).toFixed(3);
             acc[address].luckMinute = ((networkHashRate / acc[address].hashrate * blockTime) / (60)).toFixed(3);
+
+            acc[address].balance = Number(balances[workerId] || 0);
+            acc[address].immature = Number(immatures[workerId] || 0);
+            acc[address].paid = Number(payouts[workerId] || 0);
 
             return acc;
         }, {});
@@ -468,7 +462,7 @@ class StatsUpdater {
         setTimeout(() => {
             updater(logger, portalConfig, poolConfigs);
             setInterval(() => updater(logger, portalConfig, poolConfigs), websiteConfig.stats.updateInterval * 1000);
-        }, 300);
+        }, 1000);
     }
 }
 
