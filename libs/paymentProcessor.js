@@ -13,11 +13,9 @@ function chunk(arr, size) {
     return [...Array(Math.ceil(arr.length / size))].map((_, i) => arr.slice(size * i, size + size * i));
 }
 
-function roundTo(n, digits = 0) {
-    var multiplicator = Math.pow(10, digits);
-    n = parseFloat((n * multiplicator).toFixed(11));
-    var test =(Math.round(n) / multiplicator);
-    return +(test.toFixed(digits));
+function floorTo(n, digits = 0) {
+    const multiplicator = 10 ** digits;
+    return Math.floor(Number(n) * multiplicator) / multiplicator;
 }
 
 async function processPayments(pool) {
@@ -42,7 +40,7 @@ async function processPayments(pool) {
     /* Deal with numbers in smallest possible units (satoshis) as much as possible. This greatly helps with accuracy
        when rounding and whatnot. When we are storing numbers for only humans to see, store in whole coin units. */
     function satoshisToCoins(satoshis) {
-        return Number((satoshis / magnitude).toFixed(decimals));
+        return floorTo(satoshis / magnitude, decimals);
     }
 
     function coinsToSatoshies(coins) {
@@ -50,10 +48,7 @@ async function processPayments(pool) {
     }
 
     function floorCoins(n) {
-        var multiplicator = Math.pow(10, decimals);
-        n = Number((n * multiplicator).toFixed(11));
-        var test =(Math.floor(n) / multiplicator);
-        return +(test.toFixed(decimals));
+        return floorTo(n, decimals);
     }
 
     // Using coinb.in style calculation
@@ -353,12 +348,16 @@ async function processPayments(pool) {
                     const workerTime = Number(workerTimes[workerAddress] || 0);
 
                     if (workerTime) {
-                        const timePeriod = roundTo(workerTime / maxTime, 2);
+                        const timePeriod = floorTo(workerTime / maxTime, 2);
 
                         if (timePeriod && timePeriod < pplntTimeQualify) {
-                            const tshares = shares;
                             const lost = shares - (shares * timePeriod);
                             shares = Math.max(shares - lost, 0);
+
+                            /**
+                            Enable this if you want to debug shares
+
+                            const tshares = shares;
 
                             logger.warning(logSystem, logComponent,
                                 `PPLNT: Reduced shares for ${workerAddress} `
@@ -370,6 +369,7 @@ async function processPayments(pool) {
                                 + `lost: ${lost} `
                                 + `new: ${shares}`
                             );
+                            **/
                         }
 
                         if (timePeriod > 1) {
@@ -392,10 +392,14 @@ async function processPayments(pool) {
 
             round.totalShares = totalShares;
 
+            let accRewards = 0;
+
             Object.keys(workerShares).forEach(workerId => {
                 const worker = workers[workerId];
                 const percent = workerShares[workerId] / totalShares;
                 const workerRewardTotal = Math.floor(reward * percent);
+
+                accRewards += workerRewardTotal;
 
                 if (round.category === 'immature') {
                     worker.immature = (worker.immature || 0) + workerRewardTotal;
@@ -423,6 +427,9 @@ async function processPayments(pool) {
     // Fees applied with estimated input size + output size divided by miners count
     const txFees = calculateFee(confirmedRounds.length, Object.keys(workers).length);
 
+    const confirmedPayouts = confirmedRounds.reduce((acc, curr) => acc + curr.reward, 0);
+    let balancePayouts = 0;
+
     Object.keys(workers).forEach(workerId => {
         const worker = workers[workerId];
 
@@ -442,13 +449,18 @@ async function processPayments(pool) {
             worker.sent = 0;
             worker.balanceChange = Math.max(toSend - workerBalance, 0);
 
-            balanceAmounts[worker.address] = satoshisToCoins(worker.balanceChange);
+            balanceAmounts[worker.address] = floorCoins((balanceAmounts[worker.address] || 0) + satoshisToCoins(worker.balanceChange));
         }
 
         totalSent += worker.sent;
+        balancePayouts += satoshisToCoins(workerBalance);
 
         shareAmounts[worker.address] = (shareAmounts[worker.address] || 0) + (worker.totalShares || 0);
     });
+
+    if (totalSent > confirmedPayouts + balancePayouts) {
+        logger.error(logSystem, logComponent, `Payment module sending overflow, have ${confirmedPayouts + balancePayouts} sending ${totalSent}`);
+    }
 
     let txid;
 
