@@ -8,23 +8,30 @@ services:
     expose:
       - 6379
     command: ["redis-server"]
+    ports:
+      - '127.0.0.1:6379:6379'
     volumes:
       - ./redis:/data
   cpuchain_nomp:
     container_name: cpuchain_nomp
-    image: cpuchain/nomp:0.0.4
+    image: nomp
     # Build if you want to customize the pool
-    # build:
-    #   context: .
+    build:
+      context: .
     restart: always
     networks:
       - cpuchain
     ports:
-      - '8080:80'
+      - '127.0.0.1:8090:80'
       - '3032:3032'
+      - '3033:3033'
+      - '3034:3034'
+      - '3035:3035'
+      - '4032:4032'
     volumes:
       - ./config_docker.json:/nomp/config.json
       - ./cpuchain_pool.json:/nomp/pool_configs/cpuchain.json
+      - ./cpuchain_testnet_pool.json:/nomp/pool_configs/cpuchain_testnet.json
 networks:
   cpuchain:
     name: cpuchain

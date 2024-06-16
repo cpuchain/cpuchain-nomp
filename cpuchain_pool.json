@@ -1,11 +1,9 @@
 {
     "enabled": true,
     "coin": "cpuchain.json",
-    "address": "",
-    "coinbaseString": "/CPU-NOMP/",
-    "rewardRecipients": {
-        "": 1.0
-    },
+    "address": "cpu1qpt3dany8r3pgpdfa490gvyp8n4skldyzqs90px",
+    "coinbaseString": "/pool.cpuchain.org/",
+    "rewardRecipients": {},
     "paymentProcessing": {
         "enabled": true,
         "paymentInterval": 600,
@@ -24,6 +22,36 @@
     "ports": {
         "3032": {
             "diff": 0.1,
+            "varDiff": {
+                "minDiff": 0.00,
+                "maxDiff": 16,
+                "targetTime": 15,
+                "retargetTime": 60,
+                "variancePercent": 30
+            }
+        },
+        "3033": {
+            "diff": 0.5,
+            "varDiff": {
+                "minDiff": 0.00,
+                "maxDiff": 16,
+                "targetTime": 15,
+                "retargetTime": 60,
+                "variancePercent": 30
+            }
+        },
+        "3034": {
+            "diff": 1,
+            "varDiff": {
+                "minDiff": 0.00,
+                "maxDiff": 16,
+                "targetTime": 15,
+                "retargetTime": 60,
+                "variancePercent": 30
+            }
+        },
+        "3035": {
+            "diff": 10,
             "varDiff": {
                 "minDiff": 0.00,
                 "maxDiff": 16,

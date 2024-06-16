@@ -1,0 +1,52 @@
+{
+    "enabled": true,
+    "coin": "cpuchain.json",
+    "testnet": true,
+    "address": "mg3SXryWuFv9YqBx4m3afp3Lf5FFQ1VzhE",
+    "coinbaseString": "/pool.cpuchain.org/",
+    "rewardRecipients": {},
+    "paymentProcessing": {
+        "enabled": true,
+        "paymentInterval": 600,
+        "minimumPayment": 0.1,
+        "fallbackFeeRate": 0.00001,
+        "feeMultiplier": 2,
+        "paymentMode": "pplnt",
+        "pplnt": 0.51,
+        "daemon": {
+            "host": "cpuchain_testnet",
+            "port": 29707,
+            "user": "cpuchain",
+            "password": "cpuchain"
+        }
+    },
+    "ports": {
+        "4032": {
+            "diff": 0.1,
+            "varDiff": {
+                "minDiff": 0.00,
+                "maxDiff": 16,
+                "targetTime": 15,
+                "retargetTime": 60,
+                "variancePercent": 30
+            }
+        }
+    },
+    "daemons": [
+        {
+            "host": "cpuchain_testnet",
+            "port": 29707,
+            "user": "cpuchain",
+            "password": "cpuchain"
+        }
+    ],
+    "p2p": {
+        "enabled": true,
+        "host": "cpuchain_testnet",
+        "port": 29706,
+        "disableTransactions": true
+    },
+    "mposMode": {
+        "enabled": false
+    }
+}
