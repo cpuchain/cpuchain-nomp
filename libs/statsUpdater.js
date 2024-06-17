@@ -170,7 +170,7 @@ async function coinUpdater(logger, portalConfig, poolConfig) {
         let coinShares = 0;
     
         // Build workers object
-        const workers = hashrates.reduce((acc, ins) => {
+        let workers = hashrates.reduce((acc, ins) => {
             const parts = ins.split(':');
             const workerShares = Number(parts[0]);
             const worker = parts[1];
@@ -215,6 +215,12 @@ async function coinUpdater(logger, portalConfig, poolConfig) {
                 }
             }
     
+            return acc;
+        }, {});
+
+        // Sort workers in alphabetical order
+        workers = Object.values(workers).sort((a, b) => a.name.localeCompare(b.name)).reduce((acc, curr) => {
+            acc[curr.name] = curr;
             return acc;
         }, {});
     
@@ -264,7 +270,7 @@ async function coinUpdater(logger, portalConfig, poolConfig) {
             worker.luckMinute = ((networkHashRate / workerRate * blockTime) / (60)).toFixed(3);
         });
 
-        const miners = Object.keys(workers).reduce((acc, workerId) => {
+        let miners = Object.keys(workers).reduce((acc, workerId) => {
             const worker = workers[workerId];
             const { address } = worker;
 
@@ -304,6 +310,12 @@ async function coinUpdater(logger, portalConfig, poolConfig) {
             acc[address].immature = Number(immatures[address] || 0);
             acc[address].paid = Number(payouts[address] || 0);
 
+            return acc;
+        }, {});
+
+        // Sort miners by hashrate
+        miners = Object.values(miners).sort((a, b) => b.hashrate - a.hashrate).reduce((acc, curr) => {
+            acc[curr.address] = curr;
             return acc;
         }, {});
 
