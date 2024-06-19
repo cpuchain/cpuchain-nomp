@@ -85,16 +85,21 @@ module.exports = function(logger, poolConfig){
 
         const dateNow = Date.now();
 
-        let [lastShareTime, lastStartTime, allPendingBlocks] = await multiAsync([
+        const isBlockShare = isValidShare && shareData.blockHash
+
+        /**
+         * todo: Need to fix our blockTemplate to use redis since it allows miners connected with different stratum port to submit duplicated shares
+         * we validate them here
+         */
+        let [lastShareTime, lastStartTime, isDuplicatedShares, isDuplicatedBlock] = await multiAsync([
             ['hget', `${coin}:lastShareTimes`, workerAddress],
             ['hget', `${coin}:lastStartTimes`, workerAddress],
-            ['smembers', `${coin}:blocksPending`],
+            ['hexists', `${coin}:shares:seralized`, shareData.shareSerialized || ''],
+            ['hexists', `${coin}:shares:blockHash`, shareData.blockHash || ''],
         ]);
 
         lastShareTime = Number(lastShareTime);
         lastStartTime = Number(lastStartTime);
-        // blockhash of all pending blocks
-        allPendingBlocks = new Set(allPendingBlocks.map(b => b.split(':')[0]));
 
         // did they just join in this round?
         if (!lastStartTime) {
@@ -118,13 +123,26 @@ module.exports = function(logger, poolConfig){
         // track last time share
         redisCommands.push(['hset', `${coin}:lastShareTimes`, workerAddress, dateNow]);
 
-        if (isValidShare){
+        /**
+         * Prevent miner to submit a duplicated block (duplicated height would be okay since we filter them on paymentProcessor)
+         */
+        if (isBlockShare && isDuplicatedBlock) {
+            isValidShare = false;
+            isValidBlock = false;
+            logger.warning(logSystem, logComponent, logSubCat, `Miner ${shareData.worker} has submitted a duplicated block ${shareData.blockHash}, ignoring it`);
+        } else if (!isBlockShare && isDuplicatedShares) {
+            isValidShare = false;
+            logger.warning(logSystem, logComponent, logSubCat, `Miner ${shareData.worker} has submitted a duplicated shares ${shareData.shareSerialized}, ignoring it`);
+        }
+
+        if (isValidShare) {
             redisCommands.push(['hincrbyfloat', coin + ':shares:roundCurrent', shareData.worker, shareData.difficulty]);
             redisCommands.push(['hincrby', coin + ':stats', 'validShares', 1]);
-        }
-        else{
+            redisCommands.push(['hset', `${coin}:shares:seralized`, shareData.shareSerialized, shareData.worker]);
+        } else {
             redisCommands.push(['hincrby', coin + ':stats', 'invalidShares', 1]);
         }
+
         /* Stores share diff, worker, and unique value with a score that is the timestamp. Unique value ensures it
            doesn't overwrite an existing entry, and timestamp as score lets us query shares from last X minutes to
            generate hashrate for each worker and pool. */
@@ -134,13 +152,14 @@ module.exports = function(logger, poolConfig){
         /**
          * Prevent miner to submit a duplicated block (duplicated height would be okay since we filter them on paymentProcessor)
          */
-        if (allPendingBlocks.has(shareData.blockHash)) {
-            logger.warning(logSystem, logComponent, logSubCat, `Miner ${shareData.worker} has submitted a duplicated block ${shareData.blockHash}, ignoring it`);
-        } else if (isValidBlock) {
+
+        if (isValidBlock) {
             redisCommands.push(['rename', coin + ':shares:roundCurrent', coin + ':shares:round' + shareData.height]);
             redisCommands.push(['rename', coin + ':shares:timesCurrent', coin + ':shares:times' + shareData.height]);
             redisCommands.push(['sadd', coin + ':blocksPending', [shareData.blockHash, shareData.txHash, shareData.height, shareData.worker, dateNow / 1000 | 0].join(':')]);
             redisCommands.push(['hincrby', coin + ':stats', 'validBlocks', 1]);
+            redisCommands.push(['hset', `${coin}:shares:blockHash`, shareData.blockHash, shareData.worker]);
+            redisCommands.push(['del', `${coin}:shares:seralized`]);
         } else if (shareData.blockHash) {
             redisCommands.push(['hincrby', coin + ':stats', 'invalidBlocks', 1]);
         }

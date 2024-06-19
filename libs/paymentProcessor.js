@@ -521,6 +521,7 @@ async function processPayments(pool) {
 
     if (roundsToDelete.length) {
         updateCommands.push(['del'].concat(roundsToDelete));
+        updateCommands.push(['del', `${coin}:shares:blockHash`]);
     }
 
     if (totalSent) {

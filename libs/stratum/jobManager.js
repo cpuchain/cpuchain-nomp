@@ -244,6 +244,8 @@ const JobManager = module.exports = function JobManager(options) {
             }
         }
 
+        const shareSerialized = `${extraNonce1}:${extraNonce2}:${nTime}:${nonce}`
+
         _this.emit('share', {
             job: jobId,
             ip: ipAddress,
@@ -256,7 +258,8 @@ const JobManager = module.exports = function JobManager(options) {
             blockDiff : blockDiffAdjusted,
             blockDiffActual: job.difficulty,
             blockHash: blockHash,
-            blockHashInvalid: blockHashInvalid
+            blockHashInvalid: blockHashInvalid,
+            shareSerialized,
         }, blockHex);
 
         return {result: true, error: null, blockHash: blockHash};
