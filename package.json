@@ -47,7 +47,7 @@
         "multi-hashing": "github:cpuchain/node-multi-hashing#218bfdf38b440d274d2d77f6dff7fd45bae530ab",
         "node-json-minify": "^3.0.0",
         "redis": "^3.1.2",
-        "ws": "^8.17.0"
+        "ws": "^8.17.1"
     },
     "engines": {
         "node": ">=18.x"
