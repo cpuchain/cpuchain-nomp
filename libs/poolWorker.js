@@ -39,28 +39,18 @@ module.exports = function(logger){
         };
 
         handlers.auth = function(port, workerName, password, authCallback){
-            if (workerName.length === 40) {
-                try {
-                    Buffer.from(workerName, 'hex');
-                    authCallback(true);
-                }
-                catch (e) {
-                    authCallback(false);
-                }
-            } else {
-                const parts = String(workerName).split('.');
-                const address = parts[0];
-                const workerId = parts.slice(1).join('');
+            const parts = String(workerName).split('.');
+            const address = parts[0];
+            const workerId = parts.slice(1).join('');
 
-                // Test if workerId is only a combination of alphabetical letters or numbers or underbar to prevent XSS
-                if (workerId && !(new RegExp(/^([a-z]|[A-Z]|[0-9]|-|_){0,20}$/).test(workerId))) {
-                    authCallback(false);
-                    return;
-                }
-
-                // Check worker's address by bitcoinjs-lib to avoid DDOS against daemon
-                authCallback(util.checkAddress(network, address));
+            // Test if workerId is only a combination of alphabetical letters or numbers or underbar to prevent XSS
+            if (workerId && !(new RegExp(/^([a-z]|[A-Z]|[0-9]|-|_){0,20}$/).test(workerId))) {
+                authCallback(false);
+                return;
             }
+
+            // Check worker's address by bitcoinjs-lib to avoid DDOS against daemon
+            authCallback(util.checkAddress(network, address));
         };
 
         handlers.share = function(isValidShare, isValidBlock, data){

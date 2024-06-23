@@ -75,10 +75,7 @@ async function processPayments(pool) {
     }
 
     function handleAddress(workerId) {
-        if (workerId?.length === 40){
-            return util.addressFromEx(poolAddress, workerId);
-        }
-        else return workerId.split('.')[0];
+        return workerId.split('.')[0];
     }
 
     function getProperAddress(workerId) {
