@@ -403,6 +403,27 @@ async function processPayments(pool) {
     });
 
     /*
+        Some address aren't recognized by bitcoin core daemon so we double check with the daemon and credit as balance
+
+        todo: think about how we could resolve this inconsistencies but since bitcoinjs tells us as an valid address wouldn't be an easy task
+    */
+    const addressArray = Object.keys(miners);
+
+    const addressValidation = (await daemonAsync.batchCmd(addressArray.map(minerAddress => {
+        return ['validateaddress', [minerAddress]]
+    }), false)).reduce((acc, curr, index) => {
+        const minerAddress = addressArray[index];
+
+        if (curr.isvalid) {
+            acc[minerAddress] = true;
+        } else {
+            acc[minerAddress] = false;
+            logger.warning(logSystem, logComponent, `Invalid address ${minerAddress} detected from daemon`);
+        }
+        return acc;
+    }, {});
+
+    /*
         4. Calculate if any payments are ready to be sent and trigger them sending
         Get balance different for each address and pass it along as object of latest balances such as
         {worker1: balance1, worker2, balance2}
@@ -430,7 +451,7 @@ async function processPayments(pool) {
 
         const toSend = minerBalance + minerReward - txFees;
 
-        if (toSend >= minPaymentSatoshis) {
+        if (addressValidation[minerAddress] && toSend >= minPaymentSatoshis) {
             miner.sent = satoshisToCoins(toSend);
             miner.balanceChange = Math.min(minerBalance, toSend) * -1;
 
